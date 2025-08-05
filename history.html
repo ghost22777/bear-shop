@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>📜 History - Bear Shop</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { 
+      background: #150015; 
+      color: white; 
+      font-family: Arial, sans-serif; 
+      margin: 0; 
+      text-align: center; 
+    }
+    .navbar { 
+      background: #1a001a; 
+      padding: 12px 0; 
+      display: flex; 
+      justify-content: center; 
+      gap: 25px; 
+      font-weight: bold; 
+      box-shadow: 0 0 10px #ff00ff; 
+    }
+    .navbar a { 
+      color: orange; 
+      text-decoration: none; 
+      transition: 0.2s; 
+    }
+    .navbar a:hover { 
+      color: #ff00ff; 
+      text-shadow: 0 0 5px #ff00ff; 
+    }
+    #historyList { 
+      list-style: none; 
+      padding: 0; 
+      max-width: 700px; 
+      margin: 20px auto; 
+      background: rgba(40,0,40,0.9); 
+      border-radius: 8px; 
+      box-shadow: 0 0 15px #ff00ff; 
+      max-height: 500px;          /* Giới hạn chiều cao */
+      overflow-y: auto;           /* Thanh cuộn dọc */
+      text-align: left;
+    }
+    #historyList li { 
+      padding: 10px; 
+      border-bottom: 1px solid #333; 
+      color: white; 
+      font-size: 15px; 
+    }
+    #historyList li:last-child { 
+      border-bottom: none; 
+    }
+    h1 { 
+      color: #ffccff; 
+      text-shadow: 0 0 10px #ff00ff; 
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="index.html" class="logo rainbow-text">🐻 Bear Shop</a>
+    <a href="index.html">🎁 Case Opening</a>
+    <a href="shop.html">🛒 Pet Shop</a>
+    <a href="inventory.html">🎒 Inventory</a>
+    <a href="history.html">📜 History</a>
+    <a id="adminLink" href="admin_withdraws.html" style="display:none;">⚙️ Admin</a>
+    <span id="userInfo"></span>
+  </nav>
+
+  <h1>📜 Spending History</h1>
+  <ul id="historyList"></ul>
+
+  <script src="script.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+      const adminLink = document.getElementById("adminLink");
+      const list = document.getElementById("historyList");
+
+      // Nếu chưa login → chuyển về login
+      if (!currentUser) {
+        alert("⚠️ Please login first!");
+        window.location.href = "login.html";
+        return;
+      }
+
+      // Hiện link Admin nếu user là admin
+      if (currentUser.username === "duc") adminLink.style.display = "inline-block";
+
+      // Lấy lịch sử user riêng theo username
+      const key = `history_${currentUser.username}`;
+      const historyData = JSON.parse(localStorage.getItem(key)) || [];
+
+      if (historyData.length === 0) {
+        list.innerHTML = "<li>⚠️ No spending history yet.</li>";
+      } else {
+        // Đảo ngược để hiện mới nhất trước
+        historyData.slice().reverse().forEach(entry => {
+          const li = document.createElement("li");
+          let color = entry.type === "case" ? "#00ffff" : entry.type === "buy" ? "lime" : "orange";
+          li.innerHTML = `<b style="color:${color}">[${entry.type.toUpperCase()}]</b> 
+                          <span style="color:#ffccff">(${entry.date})</span> - ${entry.msg}`;
+          list.appendChild(li);
+        });
+      }
+    });
+  </script>
+</body>
+</html>

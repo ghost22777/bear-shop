@@ -1,0 +1,204 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #0b0b0f;
+    color: white;
+    text-align: center;
+    margin: 0;
+}
+
+/* ✅ Navbar */
+.navbar {
+    background: black;
+    padding: 10px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    font-weight: bold;
+}
+.navbar a {
+    color: orange;
+    text-decoration: none;
+    margin: 0 10px;
+}
+.navbar a:hover { color: #ff00ff; }
+.logo { font-size: 22px; }
+
+/* ✅ Rainbow Text Logo */
+.rainbow-text {
+    animation: rainbow 2s infinite linear;
+}
+@keyframes rainbow {
+    0% { color: red; }
+    25% { color: yellow; }
+    50% { color: lime; }
+    75% { color: cyan; }
+    100% { color: violet; }
+}
+
+/* ✅ Banner Full Width */
+.banner {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin: 10px 0;
+}
+.banner img {
+    width: 100%;
+    max-height: 300px;
+    object-fit: cover;
+    border-radius: 8px;
+    box-shadow: 0 0 25px rgba(255, 0, 255, 0.3);
+}
+
+/* ✅ Case Opening UI */
+.case-container {
+    width: 80%;
+    margin: auto;
+    overflow: hidden;
+    background: rgba(0,0,0,0.6);
+    border: 2px solid magenta;
+    border-radius: 10px;
+    box-shadow: 0 0 20px magenta;
+    position: relative;
+}
+.case-strip {
+    display: flex;
+    transition: transform 0.3s;
+}
+.item {
+    width: 120px;
+    text-align: center;
+    background: #111;
+    margin: 2px;
+    border-radius: 5px;
+}
+.item img { width: 100%; }
+
+/* ✅ Pointer */
+.pointer {
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 15px solid red;
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+}
+
+/* ✅ Button Open Case */
+.case-btn {
+    display: block;
+    position: relative;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 10px;
+    padding: 10px 25px;
+    background: #ff00ff;
+    border: none;
+    color: white;
+    font-weight: bold;
+    border-radius: 5px;
+    box-shadow: 0 0 10px magenta;
+    cursor: pointer;
+}
+.case-btn:hover { background: #ff33ff; }
+
+/* ✅ Neon Result */
+.result-neon {
+    font-size: 24px;
+    font-weight: bold;
+    color: #00ffea;
+    text-shadow: 0 0 10px #00fff2;
+    margin-top: 15px;
+}
+
+/* ✅ Floating Neon Text */
+.neon-fly {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 28px;
+    color: #fff;
+    text-shadow: 0 0 10px #ff00ff;
+    animation: flyUp 1.5s forwards;
+    z-index: 1000;
+}
+@keyframes flyUp {
+    0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -150%) scale(1.3); }
+}
+
+/* ✅ Shop Layout */
+.shop, .shop-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+}
+.pet-card {
+    background: #1c1c2b;
+    border: 2px solid #ff00ff;
+    margin: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    width: 150px;
+    text-align: center;
+    box-shadow: 0 0 10px magenta;
+}
+.pet-card img { width: 100%; border-radius: 5px; }
+
+/* ✅ Inventory Layout */
+.inventory {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 20px;
+}
+.inv-item {
+    background: #1c1c2b;
+    border: 2px solid #ff00ff;
+    margin: 10px;
+    padding: 10px;
+    width: 150px;
+    text-align: center;
+    box-shadow: 0 0 10px magenta;
+    border-radius: 8px;
+}
+.inv-item img { width: 100px; height: 100px; border-radius: 5px; }
+
+/* ✅ Withdraw Button */
+.withdraw-btn, .inv-item button {
+    background: #ff00ff;
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    margin-top: 5px;
+    cursor: pointer;
+    border-radius: 5px;
+    box-shadow: 0 0 5px magenta;
+}
+.withdraw-btn:hover, .inv-item button:hover { background: #ff33ff; }
+
+/* ✅ Logout Button (Neon Red) */
+#logoutBtn {
+    background: linear-gradient(90deg, #ff0000, #ff4d4d);
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 0 10px #ff0000;
+    margin-left: 8px;
+    transition: 0.2s;
+}
+#logoutBtn:hover {
+    background: #ff3333;
+    box-shadow: 0 0 20px #ff0000;
+    transform: scale(1.05);
+}

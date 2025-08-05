@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🛒 Pet Shop - Bear Shop</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background: #150015; color: white; font-family: Arial, sans-serif; margin: 0; text-align: center; }
+
+    /* Navbar Neon */
+    .navbar { background: #1a001a; padding: 12px 0; display: flex; justify-content: center; gap: 25px; font-weight: bold; box-shadow: 0 0 10px #ff00ff; }
+    .navbar a { color: orange; text-decoration: none; transition: 0.2s; }
+    .navbar a:hover { color: #ff00ff; text-shadow: 0 0 5px #ff00ff; }
+    .logo { font-size: 20px; }
+    h1 { color: #ffccff; text-shadow: 0 0 10px #ff00ff; }
+
+    /* Pet Shop Grid */
+    .shop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; padding: 20px; max-width: 1000px; margin: auto; }
+
+    /* Pet Card */
+    .pet-card { background: rgba(40, 0, 40, 0.9); border: 2px solid #ff00ff; border-radius: 12px; padding: 12px; box-shadow: 0 0 15px #ff00ff55; transition: 0.3s; text-align: center; }
+    .pet-card:hover { transform: scale(1.05); box-shadow: 0 0 25px #ff00ff; }
+    .pet-card img { width: 100%; border-radius: 8px; margin-bottom: 8px; box-shadow: 0 0 10px #ff00ff33; }
+    .pet-card h3 { margin: 5px 0; color: #fff; text-shadow: 0 0 5px #ff00ff; }
+    .pet-card p { color: #ffccff; font-size: 14px; margin: 5px 0; }
+
+    /* Button Neon */
+    .pet-card button { background: linear-gradient(90deg, #ff00ff, #ff33ff); color: white; border: none; padding: 8px 15px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; box-shadow: 0 0 12px #ff00ff; transition: 0.2s; }
+    .pet-card button:hover { background: #ff33ff; box-shadow: 0 0 25px #ff00ff; transform: scale(1.08); }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="index.html" class="logo rainbow-text">🐻 Bear Shop</a>
+    <a href="index.html">🎁 Case Opening</a>
+    <a href="shop.html">🛒 Pet Shop</a>
+    <a href="inventory.html">🎒 Inventory</a>
+    <a href="history.html">📜 History</a>
+    <a id="adminLink" href="admin_withdraws.html" style="display:none;">⚙️ Admin</a>
+    <span id="userInfo"></span>
+  </nav>
+
+  <h1>🛒 Pet Shop</h1>
+  <div id="shopContainer" class="shop-grid"></div>
+
+  <script src="pets.js"></script>
+  <script src="script.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+      if (!currentUser) { alert("⚠️ Please login first!"); window.location.href = "login.html"; return; }
+
+      // ✅ Admin link
+      if (currentUser.username === "duc") document.getElementById("adminLink").style.display = "inline-block";
+
+      // ✅ Render shop
+      if (typeof renderPetShop === "function") renderPetShop();
+      else document.getElementById("shopContainer").innerHTML = "<h3>⚠️ Error loading Pet Shop.</h3>";
+    });
+
+    // ✅ Fix bug lưu Inventory khi mua pet
+    function buyPet(name, price) {
+      const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+      if (!currentUser) return alert("⚠️ Please login first!");
+
+      if (currentUser.balance < price) return alert("❌ Not enough balance!");
+
+      // ✅ Trừ tiền và lưu
+      updateBalance(-price);
+      addInventory(name, "pet");
+      saveHistory("buy", `Bought pet ${name} for $${price}`);
+
+      // ✅ Thông báo đẹp
+      alert(`✅ You bought ${name} for $${price}! Check your inventory.`);
+
+      // ✅ Ngăn spam mua
+      const buttons = document.querySelectorAll(".pet-card button");
+      buttons.forEach(b => { b.disabled = true; b.style.opacity = "0.6"; });
+      setTimeout(() => buttons.forEach(b => { b.disabled = false; b.style.opacity = "1"; }), 1000);
+    }
+  </script>
+</body>
+</html>

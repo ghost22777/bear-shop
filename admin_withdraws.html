@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin - Withdraw & Add Money & User Management</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      background: #150015;
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      text-align: center;
+    }
+    table {
+      width: 90%;
+      margin: 20px auto;
+      border-collapse: collapse;
+      background: #1c1c1c;
+      color: white;
+      box-shadow: 0 0 10px #ff00ff;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #333;
+      vertical-align: middle;
+    }
+    th {
+      background: #ff00ff;
+      color: black;
+    }
+    td a {
+      color: cyan;
+      text-decoration: none;
+      display: inline-block;
+      max-width: 220px;
+      overflow-wrap: break-word;
+    }
+    td a:hover {
+      text-decoration: underline;
+    }
+    button {
+      background: limegreen;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 5px;
+      margin: 2px 0;
+    }
+    button:hover {
+      background: green;
+    }
+    .money-box, .users-box {
+      width: 90%;
+      margin: 20px auto;
+      padding: 15px;
+      background: #1c1c1c;
+      border-radius: 8px;
+      box-shadow: 0 0 10px #00ffea;
+      text-align: left;
+    }
+    .money-box input, .users-box input {
+      padding: 5px;
+      margin: 5px;
+      border-radius: 5px;
+      border: 1px solid #333;
+    }
+    .money-box button, .users-box button {
+      background: #00ffea;
+      color: black;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    .money-box button:hover, .users-box button:hover {
+      background: cyan;
+    }
+    .user-card {
+      border: 1px solid #ff00ff;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .user-card h3 {
+      margin: 0 0 5px 0;
+    }
+    .user-pets, .user-sheckles {
+      margin-left: 20px;
+    }
+    .user-pets li, .user-sheckles li {
+      list-style: disc;
+      margin-bottom: 4px;
+    }
+    .user-pets button, .user-sheckles button {
+      background: red;
+      margin-left: 10px;
+      padding: 2px 6px;
+      font-size: 12px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+    if (!currentUser || currentUser.username !== "duc") {
+      alert("🚫 Access Denied! Admin only.");
+      window.location.href = "index.html";
+    }
+  </script>
+
+  <h1>⚙️ Admin Panel</h1>
+
+  <!-- Add Money -->
+  <div class="money-box">
+    <h3>💰 Add Money to User</h3>
+    <input type="text" id="targetUser" placeholder="Enter username" />
+    <input type="number" id="amount" placeholder="Amount" />
+    <button onclick="addMoney()">✅ Add Money</button>
+  </div>
+
+  <!-- User management -->
+  <div class="users-box">
+    <h2>👥 Manage Users</h2>
+    <div id="userList"></div>
+  </div>
+
+  <!-- Withdraw requests -->
+  <h2>📋 Withdraw Requests</h2>
+  <table>
+    <thead>
+      <tr><th>User</th><th>Item</th><th>In-Game Name</th><th>VIP Link</th><th>Status</th><th>Action</th></tr>
+    </thead>
+    <tbody id="withdrawTable"></tbody>
+  </table>
+
+  <script>
+    let users = JSON.parse(localStorage.getItem("users")) || [];
+    let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
+    let reqs = JSON.parse(localStorage.getItem("withdraws")) || [];
+
+    function renderUsers() {
+      const container = document.getElementById("userList");
+      container.innerHTML = "";
+      if (users.length === 0) {
+        container.innerHTML = "<p>No users found.</p>";
+        return;
+      }
+
+      users.forEach(user => {
+        const userPets = inventory.filter(p => p.user === user.username && p.type === "pet");
+        const userSheckles = inventory.filter(p => p.user === user.username && p.type === "money");
+
+        const div = document.createElement("div");
+        div.className = "user-card";
+        div.innerHTML = `
+          <h3>${user.username} - Balance: $${user.balance.toFixed(2)}</h3>
+          <button onclick="resetBalance('${user.username}')">Reset Balance (Set $0)</button>
+
+          <h4>Pets:</h4>
+          <ul class="user-pets">
+            ${userPets.length ? userPets.map(p => `
+              <li>${p.item} <button onclick="deletePet('${p.id}')">Delete</button></li>
+            `).join('') : '<li>No pets</li>'}
+          </ul>
+          <button onclick="deleteAllPets('${user.username}')">🗑️ Delete All Pets</button>
+
+          <h4>Sheckles:</h4>
+          <ul class="user-sheckles">
+            ${userSheckles.length ? userSheckles.map(s => `
+              <li>${s.item} <button onclick="deleteSheckle('${s.id}')">Delete</button></li>
+            `).join('') : '<li>No sheckles</li>'}
+          </ul>
+          <button onclick="deleteAllSheckles('${user.username}')">🗑️ Delete All Sheckles</button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function resetBalance(username) {
+      const idx = users.findIndex(u => u.username === username);
+      if (idx !== -1) {
+        users[idx].balance = 0;
+        localStorage.setItem("users", JSON.stringify(users));
+        if (currentUser.username === username) {
+          currentUser.balance = 0;
+          localStorage.setItem("currentUser", JSON.stringify(currentUser));
+        }
+        alert(`Reset balance of ${username} to 0.`);
+        renderUsers();
+      }
+    }
+
+    function deletePet(petId) {
+      inventory = inventory.filter(p => p.id.toString() !== petId.toString());
+      localStorage.setItem("inventory", JSON.stringify(inventory));
+      alert("Deleted pet.");
+      renderUsers();
+    }
+
+    function deleteAllPets(username) {
+      inventory = inventory.filter(p => !(p.user === username && p.type === "pet"));
+      localStorage.setItem("inventory", JSON.stringify(inventory));
+      alert(`Deleted all pets of ${username}`);
+      renderUsers();
+    }
+
+    function deleteSheckle(sheckleId) {
+      inventory = inventory.filter(p => p.id.toString() !== sheckleId.toString());
+      localStorage.setItem("inventory", JSON.stringify(inventory));
+      alert("Deleted sheckle.");
+      renderUsers();
+    }
+
+    function deleteAllSheckles(username) {
+      inventory = inventory.filter(p => !(p.user === username && p.type === "money"));
+      localStorage.setItem("inventory", JSON.stringify(inventory));
+      alert(`Deleted all sheckles of ${username}`);
+      renderUsers();
+    }
+
+    function addMoney() {
+      const user = document.getElementById("targetUser").value.trim();
+      const amount = parseFloat(document.getElementById("amount").value);
+
+      if (!user || isNaN(amount) || amount <= 0) {
+        alert("⚠️ Enter valid username and amount!");
+        return;
+      }
+
+      const idx = users.findIndex(u => u.username === user);
+      if (idx === -1) {
+        alert("❌ User not found!");
+        return;
+      }
+
+      users[idx].balance += amount;
+      localStorage.setItem("users", JSON.stringify(users));
+
+      if (currentUser.username === user) {
+        currentUser.balance = users[idx].balance;
+        localStorage.setItem("currentUser", JSON.stringify(currentUser));
+      }
+
+      alert(`✅ Added $${amount} to ${user}`);
+      renderUsers();
+    }
+
+    const table = document.getElementById("withdrawTable");
+
+    function renderWithdraws() {
+      table.innerHTML = "";
+      if (reqs.length === 0) {
+        table.innerHTML = `<tr><td colspan="6" style="text-align:center;color:gray;">⚠️ No withdraw requests found.</td></tr>`;
+        return;
+      }
+      reqs.forEach((r, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${r.user}</td>
+          <td>${r.item}</td>
+          <td>${r.name}</td>
+          <td>
+            <a href="${r.link}" target="_blank">${r.link}</a><br>
+            <button onclick="sendSupportMsg('${r.user}', '${r.link}')">Send Support Message</button>
+          </td>
+          <td>${r.status || "pending"}</td>
+          <td><button onclick="markDone(${i})">✅ Done & Remove</button></td>
+        `;
+        table.appendChild(tr);
+      });
+    }
+
+    function markDone(i) {
+      reqs.splice(i, 1);
+      localStorage.setItem("withdraws", JSON.stringify(reqs));
+      renderWithdraws();
+    }
+
+    function sendSupportMsg(user, link) {
+      // Bạn có thể đổi link support ở đây
+      const supportUrl = "https://discord.gg/Cheapestgag";
+      const msg = `Hi Admin, please help user ${user} with withdraw VIP link: ${link}`;
+      alert(`Send this message to support:\n\n${msg}\n\nSupport Link: ${supportUrl}`);
+      // Hoặc bạn có thể mở supportUrl bằng window.open(supportUrl) nếu muốn
+      window.open(supportUrl, "_blank");
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      renderUsers();
+      renderWithdraws();
+    });
+  </script>
+</body>
+</html>

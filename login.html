@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🔐 Login - Bear Shop</title>
+  <style>
+    body {
+      background: #0d001a;
+      font-family: Arial, sans-serif;
+      color: white;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .navbar {
+      background: #1a001a;
+      width: 100%;
+      padding: 12px;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      font-weight: bold;
+      box-shadow: 0 0 10px #ff00ff;
+    }
+    .navbar a { color: orange; text-decoration: none; }
+    .navbar a:hover { color: #ff00ff; }
+
+    h1 { margin: 25px 0; color: #ffccff; text-shadow: 0 0 10px #ff00ff; }
+
+    /* ✅ LOGIN BOX */
+    .login-box {
+      background: #1a0026;
+      border: 2px solid #ff00ff;
+      border-radius: 12px;
+      padding: 25px;
+      width: 320px;
+      box-shadow: 0 0 20px #ff00ff55;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .login-box input {
+      background: #0d0d0d;
+      border: 1px solid #555;
+      padding: 10px;
+      border-radius: 5px;
+      color: white;
+      font-size: 14px;
+    }
+    .login-box input:focus { border: 1px solid #ff00ff; outline: none; }
+
+    .login-box button {
+      background: #ff00ff;
+      border: none;
+      color: white;
+      font-weight: bold;
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: 0 0 10px #ff00ff;
+      transition: 0.2s;
+    }
+    .login-box button:hover { background: #ff33ff; box-shadow: 0 0 15px #ff00ff; }
+
+    /* ✅ SWITCH TAB */
+    .switch { margin-top: 10px; font-size: 13px; color: #ccc; }
+    .switch a { color: #ff00ff; cursor: pointer; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="index.html">🐻 Bear Shop</a>
+    <a href="shop.html">🛒 Pet Shop</a>
+    <a href="inventory.html">🎒 Inventory</a>
+    <a href="history.html">📜 History</a>
+  </nav>
+
+  <h1>🔐 Login to Bear Shop</h1>
+
+  <div class="login-box" id="loginForm">
+    <input type="text" id="username" placeholder="Username / Email">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <div class="switch">Don't have an account? <a onclick="toggleRegister()">Register</a></div>
+  </div>
+
+  <div class="login-box" id="registerForm" style="display:none;">
+    <input type="text" id="regUsername" placeholder="Username">
+    <input type="email" id="regEmail" placeholder="Email">
+    <input type="password" id="regPassword" placeholder="Password">
+    <input type="password" id="regConfirm" placeholder="Confirm Password">
+    <button onclick="register()">Register</button>
+    <div class="switch">Already have an account? <a onclick="toggleLogin()">Login</a></div>
+  </div>
+
+<script>
+  // ✅ Chuyển qua lại giữa Login / Register
+  function toggleRegister() {
+    document.getElementById("loginForm").style.display = "none";
+    document.getElementById("registerForm").style.display = "flex";
+  }
+  function toggleLogin() {
+    document.getElementById("loginForm").style.display = "flex";
+    document.getElementById("registerForm").style.display = "none";
+  }
+
+  // ✅ Tạo admin nếu chưa có user
+  if (!localStorage.getItem("users")) {
+    localStorage.setItem("users", JSON.stringify([{ username: "duc", email: "admin@bear.com", password: "0357454005duc", balance: 100, isAdmin: true }]));
+  }
+
+  if (localStorage.getItem("currentUser")) {
+    window.location.href = "index.html";
+  }
+
+  // ✅ Login
+  function login() {
+    let users = JSON.parse(localStorage.getItem("users"));
+    let u = document.getElementById("username").value.trim();
+    let p = document.getElementById("password").value.trim();
+
+    let user = users.find(x => (x.username === u || x.email === u) && x.password === p);
+    if (user) {
+      localStorage.setItem("currentUser", JSON.stringify(user));
+      alert("✅ Login successful!");
+      window.location.href = "index.html";
+    } else alert("❌ Wrong username/email or password!");
+  }
+
+  // ✅ Register
+  function register() {
+    let users = JSON.parse(localStorage.getItem("users"));
+    let u = document.getElementById("regUsername").value.trim();
+    let e = document.getElementById("regEmail").value.trim();
+    let p = document.getElementById("regPassword").value.trim();
+    let c = document.getElementById("regConfirm").value.trim();
+
+    if (!u || !e || !p || !c) return alert("⚠️ Please fill all fields!");
+    if (p !== c) return alert("❌ Passwords do not match!");
+    if (users.find(x => x.username === u || x.email === e)) return alert("❌ Username or Email already exists!");
+
+    let balance = (u === "duc") ? 100 : 0;
+    users.push({ username: u, email: e, password: p, balance, isAdmin: u === "duc" });
+    localStorage.setItem("users", JSON.stringify(users));
+    alert("✅ Account created! You can login now.");
+    toggleLogin();
+  }
+</script>
+</body>
+</html>
