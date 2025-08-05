@@ -135,13 +135,25 @@
   </table>
 
   <script>
-    let users = JSON.parse(localStorage.getItem("users")) || [];
-    let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
-    let reqs = JSON.parse(localStorage.getItem("withdraws")) || [];
+    // Lấy dữ liệu mới nhất mỗi khi cần
+    function getUsers() {
+      return JSON.parse(localStorage.getItem("users")) || [];
+    }
+
+    function getInventory() {
+      return JSON.parse(localStorage.getItem("inventory")) || [];
+    }
+
+    function getWithdraws() {
+      return JSON.parse(localStorage.getItem("withdraws")) || [];
+    }
 
     function renderUsers() {
       const container = document.getElementById("userList");
       container.innerHTML = "";
+      const users = getUsers();
+      const inventory = getInventory();
+
       if (users.length === 0) {
         container.innerHTML = "<p>No users found.</p>";
         return;
@@ -178,6 +190,7 @@
     }
 
     function resetBalance(username) {
+      let users = getUsers();
       const idx = users.findIndex(u => u.username === username);
       if (idx !== -1) {
         users[idx].balance = 0;
@@ -192,6 +205,7 @@
     }
 
     function deletePet(petId) {
+      let inventory = getInventory();
       inventory = inventory.filter(p => p.id.toString() !== petId.toString());
       localStorage.setItem("inventory", JSON.stringify(inventory));
       alert("Deleted pet.");
@@ -199,6 +213,7 @@
     }
 
     function deleteAllPets(username) {
+      let inventory = getInventory();
       inventory = inventory.filter(p => !(p.user === username && p.type === "pet"));
       localStorage.setItem("inventory", JSON.stringify(inventory));
       alert(`Deleted all pets of ${username}`);
@@ -206,6 +221,7 @@
     }
 
     function deleteSheckle(sheckleId) {
+      let inventory = getInventory();
       inventory = inventory.filter(p => p.id.toString() !== sheckleId.toString());
       localStorage.setItem("inventory", JSON.stringify(inventory));
       alert("Deleted sheckle.");
@@ -213,6 +229,7 @@
     }
 
     function deleteAllSheckles(username) {
+      let inventory = getInventory();
       inventory = inventory.filter(p => !(p.user === username && p.type === "money"));
       localStorage.setItem("inventory", JSON.stringify(inventory));
       alert(`Deleted all sheckles of ${username}`);
@@ -220,6 +237,7 @@
     }
 
     function addMoney() {
+      let users = getUsers();
       const user = document.getElementById("targetUser").value.trim();
       const amount = parseFloat(document.getElementById("amount").value);
 
@@ -246,10 +264,11 @@
       renderUsers();
     }
 
-    const table = document.getElementById("withdrawTable");
-
     function renderWithdraws() {
+      const table = document.getElementById("withdrawTable");
       table.innerHTML = "";
+      const reqs = getWithdraws();
+
       if (reqs.length === 0) {
         table.innerHTML = `<tr><td colspan="6" style="text-align:center;color:gray;">⚠️ No withdraw requests found.</td></tr>`;
         return;
@@ -272,17 +291,16 @@
     }
 
     function markDone(i) {
+      let reqs = getWithdraws();
       reqs.splice(i, 1);
       localStorage.setItem("withdraws", JSON.stringify(reqs));
       renderWithdraws();
     }
 
     function sendSupportMsg(user, link) {
-      // Bạn có thể đổi link support ở đây
       const supportUrl = "https://discord.gg/Cheapestgag";
       const msg = `Hi Admin, please help user ${user} with withdraw VIP link: ${link}`;
       alert(`Send this message to support:\n\n${msg}\n\nSupport Link: ${supportUrl}`);
-      // Hoặc bạn có thể mở supportUrl bằng window.open(supportUrl) nếu muốn
       window.open(supportUrl, "_blank");
     }
 
