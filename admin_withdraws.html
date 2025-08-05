@@ -101,58 +101,71 @@
   </style>
 </head>
 <body>
-  <script>
-    const currentUser = JSON.parse(localStorage.getItem("currentUser"));
-    if (!currentUser || currentUser.username !== "duc") {
-      alert("🚫 Access Denied! Admin only.");
-      window.location.href = "index.html";
-    }
-  </script>
-
-  <h1>⚙️ Admin Panel</h1>
-
-  <!-- Add Money -->
-  <div class="money-box">
-    <h3>💰 Add Money to User</h3>
-    <input type="text" id="targetUser" placeholder="Enter username" />
-    <input type="number" id="amount" placeholder="Amount" />
-    <button onclick="addMoney()">✅ Add Money</button>
-  </div>
-
-  <!-- User management -->
-  <div class="users-box">
-    <h2>👥 Manage Users</h2>
-    <div id="userList"></div>
-  </div>
-
-  <!-- Withdraw requests -->
-  <h2>📋 Withdraw Requests</h2>
-  <table>
-    <thead>
-      <tr><th>User</th><th>Item</th><th>In-Game Name</th><th>VIP Link</th><th>Status</th><th>Action</th></tr>
-    </thead>
-    <tbody id="withdrawTable"></tbody>
-  </table>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <script>
-    // Lấy dữ liệu mới nhất mỗi khi cần
-    function getUsers() {
-      return JSON.parse(localStorage.getItem("users")) || [];
+    // Cấu hình Firebase của bạn
+    const firebaseConfig = {
+      apiKey: "AIzaSyBUCFW2ffGXPBogDUyd1cDYEt15fHQiz9I",
+      authDomain: "bearshop-49b90.firebaseapp.com",
+      projectId: "bearshop-49b90",
+      storageBucket: "bearshop-49b90.firebasestorage.app",
+      messagingSenderId: "764985024020",
+      appId: "1:764985024020:web:62e152b71173d2f3c89101",
+      measurementId: "G-D3DC6707R1"
+    };
+
+    // Khởi tạo Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let currentUser;
+
+    auth.onAuthStateChanged(user => {
+      currentUser = user;
+      if (!user) {
+        alert("🚫 Access Denied! Please login.");
+        window.location.href = "login.html";
+        return;
+      }
+      checkAdmin();
+      renderUsers();
+      renderWithdraws();
+    });
+
+    async function checkAdmin() {
+      if (!currentUser) return;
+      const doc = await db.collection("users").doc(currentUser.uid).get();
+      if (!doc.exists || !doc.data().isAdmin) {
+        alert("🚫 Access Denied! Admin only.");
+        window.location.href = "index.html";
+      }
     }
 
-    function getInventory() {
-      return JSON.parse(localStorage.getItem("inventory")) || [];
+    async function getUsers() {
+      const snapshot = await db.collection("users").get();
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     }
 
-    function getWithdraws() {
-      return JSON.parse(localStorage.getItem("withdraws")) || [];
+    async function getInventory() {
+      const snapshot = await db.collection("inventory").get();
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     }
 
-    function renderUsers() {
+    async function getWithdraws() {
+      const snapshot = await db.collection("withdraws").get();
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+
+    async function renderUsers() {
       const container = document.getElementById("userList");
       container.innerHTML = "";
-      const users = getUsers();
-      const inventory = getInventory();
+      const users = await getUsers();
+      const inventory = await getInventory();
 
       if (users.length === 0) {
         container.innerHTML = "<p>No users found.</p>";
@@ -160,14 +173,14 @@
       }
 
       users.forEach(user => {
-        const userPets = inventory.filter(p => p.user === user.username && p.type === "pet");
-        const userSheckles = inventory.filter(p => p.user === user.username && p.type === "money");
+        const userPets = inventory.filter(p => p.userId === user.id && p.type === "pet");
+        const userSheckles = inventory.filter(p => p.userId === user.id && p.type === "money");
 
         const div = document.createElement("div");
         div.className = "user-card";
         div.innerHTML = `
-          <h3>${user.username} - Balance: $${user.balance.toFixed(2)}</h3>
-          <button onclick="resetBalance('${user.username}')">Reset Balance (Set $0)</button>
+          <h3>${user.username || user.email} - Balance: $${(user.balance || 0).toFixed(2)}</h3>
+          <button onclick="resetBalance('${user.id}')">Reset Balance (Set $0)</button>
 
           <h4>Pets:</h4>
           <ul class="user-pets">
@@ -175,7 +188,7 @@
               <li>${p.item} <button onclick="deletePet('${p.id}')">Delete</button></li>
             `).join('') : '<li>No pets</li>'}
           </ul>
-          <button onclick="deleteAllPets('${user.username}')">🗑️ Delete All Pets</button>
+          <button onclick="deleteAllPets('${user.id}')">🗑️ Delete All Pets</button>
 
           <h4>Sheckles:</h4>
           <ul class="user-sheckles">
@@ -183,91 +196,93 @@
               <li>${s.item} <button onclick="deleteSheckle('${s.id}')">Delete</button></li>
             `).join('') : '<li>No sheckles</li>'}
           </ul>
-          <button onclick="deleteAllSheckles('${user.username}')">🗑️ Delete All Sheckles</button>
+          <button onclick="deleteAllSheckles('${user.id}')">🗑️ Delete All Sheckles</button>
         `;
         container.appendChild(div);
       });
     }
 
-    function resetBalance(username) {
-      let users = getUsers();
-      const idx = users.findIndex(u => u.username === username);
-      if (idx !== -1) {
-        users[idx].balance = 0;
-        localStorage.setItem("users", JSON.stringify(users));
-        if (currentUser.username === username) {
-          currentUser.balance = 0;
-          localStorage.setItem("currentUser", JSON.stringify(currentUser));
-        }
-        alert(`Reset balance of ${username} to 0.`);
-        renderUsers();
+    async function resetBalance(userId) {
+      const userRef = db.collection("users").doc(userId);
+      await userRef.update({ balance: 0 });
+      if (currentUser.uid === userId) {
+        currentUser.balance = 0;
       }
+      alert(`Reset balance of user.`);
+      renderUsers();
     }
 
-    function deletePet(petId) {
-      let inventory = getInventory();
-      inventory = inventory.filter(p => p.id.toString() !== petId.toString());
-      localStorage.setItem("inventory", JSON.stringify(inventory));
+    async function deletePet(petId) {
+      await db.collection("inventory").doc(petId).delete();
       alert("Deleted pet.");
       renderUsers();
     }
 
-    function deleteAllPets(username) {
-      let inventory = getInventory();
-      inventory = inventory.filter(p => !(p.user === username && p.type === "pet"));
-      localStorage.setItem("inventory", JSON.stringify(inventory));
-      alert(`Deleted all pets of ${username}`);
+    async function deleteAllPets(userId) {
+      const snapshot = await db.collection("inventory")
+        .where("userId", "==", userId)
+        .where("type", "==", "pet").get();
+
+      const batch = db.batch();
+      snapshot.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+
+      alert(`Deleted all pets of user.`);
       renderUsers();
     }
 
-    function deleteSheckle(sheckleId) {
-      let inventory = getInventory();
-      inventory = inventory.filter(p => p.id.toString() !== sheckleId.toString());
-      localStorage.setItem("inventory", JSON.stringify(inventory));
+    async function deleteSheckle(sheckleId) {
+      await db.collection("inventory").doc(sheckleId).delete();
       alert("Deleted sheckle.");
       renderUsers();
     }
 
-    function deleteAllSheckles(username) {
-      let inventory = getInventory();
-      inventory = inventory.filter(p => !(p.user === username && p.type === "money"));
-      localStorage.setItem("inventory", JSON.stringify(inventory));
-      alert(`Deleted all sheckles of ${username}`);
+    async function deleteAllSheckles(userId) {
+      const snapshot = await db.collection("inventory")
+        .where("userId", "==", userId)
+        .where("type", "==", "money").get();
+
+      const batch = db.batch();
+      snapshot.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+
+      alert(`Deleted all sheckles of user.`);
       renderUsers();
     }
 
-    function addMoney() {
-      let users = getUsers();
-      const user = document.getElementById("targetUser").value.trim();
+    async function addMoney() {
+      const userIdInput = document.getElementById("targetUser").value.trim();
       const amount = parseFloat(document.getElementById("amount").value);
 
-      if (!user || isNaN(amount) || amount <= 0) {
-        alert("⚠️ Enter valid username and amount!");
+      if (!userIdInput || isNaN(amount) || amount <= 0) {
+        alert("⚠️ Enter valid user ID and amount!");
         return;
       }
 
-      const idx = users.findIndex(u => u.username === user);
-      if (idx === -1) {
+      // Tìm user theo username hoặc email
+      const users = await getUsers();
+      const user = users.find(u => u.username === userIdInput || u.email === userIdInput);
+      if (!user) {
         alert("❌ User not found!");
         return;
       }
 
-      users[idx].balance += amount;
-      localStorage.setItem("users", JSON.stringify(users));
+      const userRef = db.collection("users").doc(user.id);
+      const newBalance = (user.balance || 0) + amount;
+      await userRef.update({ balance: newBalance });
 
-      if (currentUser.username === user) {
-        currentUser.balance = users[idx].balance;
-        localStorage.setItem("currentUser", JSON.stringify(currentUser));
+      if (currentUser.uid === user.id) {
+        currentUser.balance = newBalance;
       }
 
-      alert(`✅ Added $${amount} to ${user}`);
+      alert(`✅ Added $${amount} to ${user.username || user.email}`);
       renderUsers();
     }
 
-    function renderWithdraws() {
+    async function renderWithdraws() {
       const table = document.getElementById("withdrawTable");
       table.innerHTML = "";
-      const reqs = getWithdraws();
+      const reqs = await getWithdraws();
 
       if (reqs.length === 0) {
         table.innerHTML = `<tr><td colspan="6" style="text-align:center;color:gray;">⚠️ No withdraw requests found.</td></tr>`;
@@ -284,16 +299,14 @@
             <button onclick="sendSupportMsg('${r.user}', '${r.link}')">Send Support Message</button>
           </td>
           <td>${r.status || "pending"}</td>
-          <td><button onclick="markDone(${i})">✅ Done & Remove</button></td>
+          <td><button onclick="markDone('${r.id}')">✅ Done & Remove</button></td>
         `;
         table.appendChild(tr);
       });
     }
 
-    function markDone(i) {
-      let reqs = getWithdraws();
-      reqs.splice(i, 1);
-      localStorage.setItem("withdraws", JSON.stringify(reqs));
+    async function markDone(id) {
+      await db.collection("withdraws").doc(id).delete();
       renderWithdraws();
     }
 
@@ -303,11 +316,28 @@
       alert(`Send this message to support:\n\n${msg}\n\nSupport Link: ${supportUrl}`);
       window.open(supportUrl, "_blank");
     }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      renderUsers();
-      renderWithdraws();
-    });
   </script>
+
+  <h1>⚙️ Admin Panel</h1>
+
+  <div class="money-box">
+    <h3>💰 Add Money to User</h3>
+    <input type="text" id="targetUser" placeholder="Enter username or email" />
+    <input type="number" id="amount" placeholder="Amount" />
+    <button onclick="addMoney()">✅ Add Money</button>
+  </div>
+
+  <div class="users-box">
+    <h2>👥 Manage Users</h2>
+    <div id="userList"></div>
+  </div>
+
+  <h2>📋 Withdraw Requests</h2>
+  <table>
+    <thead>
+      <tr><th>User</th><th>Item</th><th>In-Game Name</th><th>VIP Link</th><th>Status</th><th>Action</th></tr>
+    </thead>
+    <tbody id="withdrawTable"></tbody>
+  </table>
 </body>
 </html>
