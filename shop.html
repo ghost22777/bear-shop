@@ -1,30 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>🛒 Pet Shop - Bear Shop</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
   <style>
     body { background: #150015; color: white; font-family: Arial, sans-serif; margin: 0; text-align: center; }
-
-    /* Navbar Neon */
     .navbar { background: #1a001a; padding: 12px 0; display: flex; justify-content: center; gap: 25px; font-weight: bold; box-shadow: 0 0 10px #ff00ff; }
     .navbar a { color: orange; text-decoration: none; transition: 0.2s; }
     .navbar a:hover { color: #ff00ff; text-shadow: 0 0 5px #ff00ff; }
     .logo { font-size: 20px; }
     h1 { color: #ffccff; text-shadow: 0 0 10px #ff00ff; }
-
-    /* Pet Shop Grid */
     .shop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; padding: 20px; max-width: 1000px; margin: auto; }
-
-    /* Pet Card */
     .pet-card { background: rgba(40, 0, 40, 0.9); border: 2px solid #ff00ff; border-radius: 12px; padding: 12px; box-shadow: 0 0 15px #ff00ff55; transition: 0.3s; text-align: center; }
     .pet-card:hover { transform: scale(1.05); box-shadow: 0 0 25px #ff00ff; }
     .pet-card img { width: 100%; border-radius: 8px; margin-bottom: 8px; box-shadow: 0 0 10px #ff00ff33; }
     .pet-card h3 { margin: 5px 0; color: #fff; text-shadow: 0 0 5px #ff00ff; }
     .pet-card p { color: #ffccff; font-size: 14px; margin: 5px 0; }
-
-    /* Button Neon */
     .pet-card button { background: linear-gradient(90deg, #ff00ff, #ff33ff); color: white; border: none; padding: 8px 15px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; box-shadow: 0 0 12px #ff00ff; transition: 0.2s; }
     .pet-card button:hover { background: #ff33ff; box-shadow: 0 0 25px #ff00ff; transform: scale(1.08); }
   </style>
@@ -43,41 +35,138 @@
   <h1>🛒 Pet Shop</h1>
   <div id="shopContainer" class="shop-grid"></div>
 
-  <script src="pets.js"></script>
-  <script src="script.js"></script>
+  <!-- ✅ Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const currentUser = JSON.parse(localStorage.getItem("currentUser"));
-      if (!currentUser) { alert("⚠️ Please login first!"); window.location.href = "login.html"; return; }
+    // ✅ Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyBUCFW2ffGXPBogDUyd1cDYEt15fHQiz9I",
+      authDomain: "bearshop-49b90.firebaseapp.com",
+      projectId: "bearshop-49b90",
+      storageBucket: "bearshop-49b90.firebasestorage.app",
+      messagingSenderId: "764985024020",
+      appId: "1:764985024020:web:62e152b71173d2f3c89101"
+    };
 
-      // ✅ Admin link
-      if (currentUser.username === "duc") document.getElementById("adminLink").style.display = "inline-block";
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
-      // ✅ Render shop
-      if (typeof renderPetShop === "function") renderPetShop();
-      else document.getElementById("shopContainer").innerHTML = "<h3>⚠️ Error loading Pet Shop.</h3>";
+    let currentUser = null;
+    let currentUserDocRef = null;
+
+    // ✅ Kiểm tra đăng nhập và load user
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) return location.href = "login.html";
+      currentUserDocRef = db.collection("users").doc(user.uid);
+      const docSnap = await currentUserDocRef.get();
+
+      if (!docSnap.exists) {
+        alert("❌ User data not found!");
+        await auth.signOut();
+        location.href = "login.html";
+        return;
+      }
+
+      currentUser = { uid: user.uid, ...docSnap.data() };
+      if (currentUser.isAdmin) document.getElementById("adminLink").style.display = "inline-block";
+
+      renderUserUI();
+      renderPetShop();
     });
 
-    // ✅ Fix bug lưu Inventory khi mua pet
-    function buyPet(name, price) {
-      const currentUser = JSON.parse(localStorage.getItem("currentUser"));
-      if (!currentUser) return alert("⚠️ Please login first!");
+    // ✅ UI User Info + Add Funds + Logout
+    function renderUserUI() {
+      const ui = document.getElementById("userInfo");
+      ui.innerHTML = `
+        👤 ${currentUser.username} | 💰 $${(currentUser.balance || 0).toFixed(2)}
+        <button id="addFundsBtn" style="background:#0080ff;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;margin-left:5px;">Add Funds</button>
+        <button id="logoutBtn" style="background:red;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;margin-left:5px;">Logout</button>
+      `;
+      document.getElementById("logoutBtn").onclick = () => auth.signOut().then(() => location.href = "login.html");
+      document.getElementById("addFundsBtn").onclick = showAddFundsDialog;
+    }
 
-      if (currentUser.balance < price) return alert("❌ Not enough balance!");
+    // ✅ Popup Add Funds
+    function showAddFundsDialog() {
+      if (document.getElementById("fundPopup")) return;
+      const p = document.createElement("div");
+      p.id = "fundPopup";
+      p.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#000c;padding:20px;color:white;border-radius:8px;box-shadow:0 0 15px #ff00ff;z-index:2000";
+      p.innerHTML = `
+        <h2>Add Funds</h2>
+        <p>Contact admin on Discord: <a href="https://discord.gg/Cheapestgag" target="_blank" style="color:#00ffff">BearShop</a></p>
+        <button onclick="document.getElementById('fundPopup').remove()" style="margin-top:10px;background:#ff00ff;border:none;padding:6px 12px;border-radius:5px;color:white">Close</button>
+      `;
+      document.body.appendChild(p);
+    }
 
-      // ✅ Trừ tiền và lưu
-      updateBalance(-price);
-      addInventory(name, "pet");
-      saveHistory("buy", `Bought pet ${name} for $${price}`);
+    // ✅ Update Balance
+    async function updateBalance(amount) {
+      const nb = (currentUser.balance || 0) + amount;
+      await currentUserDocRef.update({ balance: nb });
+      currentUser.balance = nb;
+      renderUserUI();
+    }
 
-      // ✅ Thông báo đẹp
-      alert(`✅ You bought ${name} for $${price}! Check your inventory.`);
+    // ✅ Add Inventory
+    async function addInventory(itemName, type) {
+      await db.collection("inventory").add({
+        userId: currentUser.uid,
+        username: currentUser.username,
+        item: itemName,
+        type,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
 
-      // ✅ Ngăn spam mua
-      const buttons = document.querySelectorAll(".pet-card button");
-      buttons.forEach(b => { b.disabled = true; b.style.opacity = "0.6"; });
-      setTimeout(() => buttons.forEach(b => { b.disabled = false; b.style.opacity = "1"; }), 1000);
+    // ✅ Save History (dùng createdAt)
+    async function saveHistory(type, msg) {
+      await db.collection("history").add({
+        userId: currentUser.uid,
+        username: currentUser.username,
+        type,
+        msg,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    // ✅ Render Shop
+    function renderPetShop() {
+      if (typeof petList === "undefined") {
+        document.getElementById("shopContainer").innerHTML = "<h3>⚠️ Pet list not loaded.</h3>";
+        return;
+      }
+      const container = document.getElementById("shopContainer");
+      container.innerHTML = "";
+
+      petList.forEach(p => {
+        const card = document.createElement("div");
+        card.className = "pet-card";
+        card.innerHTML = `
+          <img src="${p.img}" alt="${p.name}">
+          <h3>${p.name}</h3>
+          <p>Price: $${p.price.toFixed(2)}</p>
+          <button onclick="buyPet('${p.name}', ${p.price})">Buy</button>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // ✅ Mua Pet
+    async function buyPet(name, price) {
+      if ((currentUser.balance || 0) < price) return alert("❌ Not enough balance!");
+      await updateBalance(-price);
+      await addInventory(name, "pet");
+      await saveHistory("buy", `Bought pet ${name} for $${price}`);
+      alert(`✅ You bought ${name} for $${price}!`);
     }
   </script>
+
+  <!-- ✅ Pet List -->
+  <script src="pets.js"></script>
 </body>
 </html>

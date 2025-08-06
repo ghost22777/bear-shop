@@ -137,17 +137,15 @@
       }
 
       auth.createUserWithEmailAndPassword(email, password)
-        .then((userCredential) => {
+        .then(async (userCredential) => {
           const user = userCredential.user;
           // Save extra data to Firestore
-          return db.collection("users").doc(user.uid).set({
+          await db.collection("users").doc(user.uid).set({
             username: username,
             email: email,
             balance: 0,
             isAdmin: username === "duc"
           });
-        })
-        .then(() => {
           alert("✅ Account created! You can login now.");
           toggleLogin();
         })
@@ -162,7 +160,17 @@
       const password = document.getElementById("loginPassword").value.trim();
 
       auth.signInWithEmailAndPassword(email, password)
-        .then(() => {
+        .then(async (userCredential) => {
+          const user = userCredential.user;
+          const userDoc = await db.collection("users").doc(user.uid).get();
+          if (!userDoc.exists) {
+            alert("❌ User data not found!");
+            return;
+          }
+          const userData = userDoc.data();
+          // Save currentUser with uid to localStorage
+          const currentUser = { uid: user.uid, ...userData };
+          localStorage.setItem("currentUser", JSON.stringify(currentUser));
           alert("✅ Login successful!");
           window.location.href = "index.html";
         })

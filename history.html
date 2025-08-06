@@ -1,60 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>📜 History - Bear Shop</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
   <style>
-    body { 
-      background: #150015; 
-      color: white; 
-      font-family: Arial, sans-serif; 
-      margin: 0; 
-      text-align: center; 
-    }
-    .navbar { 
-      background: #1a001a; 
-      padding: 12px 0; 
-      display: flex; 
-      justify-content: center; 
-      gap: 25px; 
-      font-weight: bold; 
-      box-shadow: 0 0 10px #ff00ff; 
-    }
-    .navbar a { 
-      color: orange; 
-      text-decoration: none; 
-      transition: 0.2s; 
-    }
-    .navbar a:hover { 
-      color: #ff00ff; 
-      text-shadow: 0 0 5px #ff00ff; 
-    }
-    #historyList { 
-      list-style: none; 
-      padding: 0; 
-      max-width: 700px; 
-      margin: 20px auto; 
-      background: rgba(40,0,40,0.9); 
-      border-radius: 8px; 
-      box-shadow: 0 0 15px #ff00ff; 
-      max-height: 500px;          /* Giới hạn chiều cao */
-      overflow-y: auto;           /* Thanh cuộn dọc */
-      text-align: left;
-    }
-    #historyList li { 
-      padding: 10px; 
-      border-bottom: 1px solid #333; 
-      color: white; 
-      font-size: 15px; 
-    }
-    #historyList li:last-child { 
-      border-bottom: none; 
-    }
-    h1 { 
-      color: #ffccff; 
-      text-shadow: 0 0 10px #ff00ff; 
-    }
+    body { background:#150015; color:white; font-family:Arial,sans-serif; margin:0; text-align:center; }
+    .navbar { background:#1a001a; padding:12px 0; display:flex; justify-content:center; gap:25px; font-weight:bold; box-shadow:0 0 10px #ff00ff; }
+    .navbar a { color:orange; text-decoration:none; transition:0.2s; }
+    .navbar a:hover { color:#ff00ff; text-shadow:0 0 5px #ff00ff; }
+    #historyList { list-style:none; padding:0; max-width:700px; margin:20px auto; background:rgba(40,0,40,0.9); border-radius:8px; box-shadow:0 0 15px #ff00ff; max-height:500px; overflow-y:auto; text-align:left; }
+    #historyList li { padding:10px; border-bottom:1px solid #333; color:white; font-size:15px; }
+    #historyList li:last-child { border-bottom:none; }
+    h1 { color:#ffccff; text-shadow:0 0 10px #ff00ff; }
   </style>
 </head>
 <body>
@@ -69,42 +27,114 @@
   </nav>
 
   <h1>📜 Spending History</h1>
-  <ul id="historyList"></ul>
+  <ul id="historyList"><li>⏳ Loading...</li></ul>
 
-  <script src="script.js"></script>
+  <!-- ✅ Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const currentUser = JSON.parse(localStorage.getItem("currentUser"));
-      const adminLink = document.getElementById("adminLink");
-      const list = document.getElementById("historyList");
+    const firebaseConfig = {
+      apiKey: "AIzaSyBUCFW2ffGXPBogDUyd1cDYEt15fHQiz9I",
+      authDomain: "bearshop-49b90.firebaseapp.com",
+      projectId: "bearshop-49b90",
+      storageBucket: "bearshop-49b90.firebasestorage.app",
+      messagingSenderId: "764985024020",
+      appId: "1:764985024020:web:62e152b71173d2f3c89101"
+    };
 
-      // Nếu chưa login → chuyển về login
-      if (!currentUser) {
-        alert("⚠️ Please login first!");
-        window.location.href = "login.html";
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const list = document.getElementById("historyList");
+    const userInfoSpan = document.getElementById("userInfo");
+    const adminLink = document.getElementById("adminLink");
+    let currentUser = null;
+
+    // ✅ Xóa lịch sử cũ hơn 7 ngày
+    async function autoCleanHistory() {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const oldLogs = await db.collection("history")
+        .where("createdAt", "<", sevenDaysAgo)
+        .get();
+
+      if (!oldLogs.empty) {
+        const batch = db.batch();
+        oldLogs.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        console.log(`🗑️ AutoClean: Đã xóa ${oldLogs.size} log cũ hơn 7 ngày`);
+      }
+    }
+
+    // ✅ Load User + History
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) return location.href = "login.html";
+
+      const docSnap = await db.collection("users").doc(user.uid).get();
+      if (!docSnap.exists) return auth.signOut().then(() => location.href = "login.html");
+
+      currentUser = { uid: user.uid, ...docSnap.data() };
+      renderUserUI();
+      if (currentUser.isAdmin) adminLink.style.display = "inline-block";
+
+      // 🟢 Gọi hàm xóa log cũ
+      await autoCleanHistory();
+
+      // ✅ Query history (với index createdAt)
+      const snap = await db.collection("history")
+        .where("userId", "==", currentUser.uid)
+        .orderBy("createdAt", "desc")
+        .get();
+
+      if (snap.empty) {
+        list.innerHTML = "<li>⚠️ No history found.</li>";
         return;
       }
 
-      // Hiện link Admin nếu user là admin
-      if (currentUser.username === "duc") adminLink.style.display = "inline-block";
+      list.innerHTML = "";
+      snap.forEach(doc => {
+        const e = doc.data();
+        const type = e.type || "unknown";
+        const msg = e.msg || "";
+        const date = e.createdAt ? e.createdAt.toDate().toLocaleString() : "Unknown";
+        const color = type === "case" ? "#00ffff" : type === "buy" ? "lime" : "orange";
 
-      // Lấy lịch sử user riêng theo username
-      const key = `history_${currentUser.username}`;
-      const historyData = JSON.parse(localStorage.getItem(key)) || [];
-
-      if (historyData.length === 0) {
-        list.innerHTML = "<li>⚠️ No spending history yet.</li>";
-      } else {
-        // Đảo ngược để hiện mới nhất trước
-        historyData.slice().reverse().forEach(entry => {
-          const li = document.createElement("li");
-          let color = entry.type === "case" ? "#00ffff" : entry.type === "buy" ? "lime" : "orange";
-          li.innerHTML = `<b style="color:${color}">[${entry.type.toUpperCase()}]</b> 
-                          <span style="color:#ffccff">(${entry.date})</span> - ${entry.msg}`;
-          list.appendChild(li);
-        });
-      }
+        list.innerHTML += `
+          <li>
+            <b style="color:${color}">[${type.toUpperCase()}]</b>
+            <span style="color:#ffccff">(${date})</span> - ${msg}
+          </li>`;
+      });
     });
+
+    // ✅ UI Logout + Add Funds
+    function renderUserUI() {
+      userInfoSpan.innerHTML = `
+        👤 ${currentUser.username} | 💰 $${(currentUser.balance || 0).toFixed(2)}
+        <button id="addFundsBtn" style="background:#0080ff;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;margin-left:5px;">Add Funds</button>
+        <button id="logoutBtn" style="background:red;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;margin-left:5px;">Logout</button>
+      `;
+      document.getElementById("logoutBtn").onclick = () => auth.signOut().then(() => location.href = "login.html");
+      document.getElementById("addFundsBtn").onclick = showAddFundsDialog;
+    }
+
+    // ✅ Popup Add Funds
+    function showAddFundsDialog() {
+      if (document.getElementById("fundPopup")) return;
+      const p = document.createElement("div");
+      p.id = "fundPopup";
+      p.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#000c;padding:20px;color:white;border-radius:8px;box-shadow:0 0 15px #ff00ff;z-index:2000;text-align:center;max-width:350px";
+      p.innerHTML = `
+        <h2>Add Funds</h2>
+        <p>Contact admin on Discord:</p>
+        <p><a href="https://discord.gg/Cheapestgag" target="_blank" style="color:#00ffff">BearShop Server</a></p>
+        <button onclick="document.getElementById('fundPopup').remove()" style="margin-top:10px;background:#ff00ff;border:none;padding:6px 12px;border-radius:5px;color:white">Close</button>
+      `;
+      document.body.appendChild(p);
+    }
   </script>
 </body>
 </html>
