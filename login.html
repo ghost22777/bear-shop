@@ -50,7 +50,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <script>
-    // ✅ Firebase config
+    // ✅ Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyBUCFW2ffGXPBogDUyd1cDYEt15fHQiz9I",
       authDomain: "bearshop-49b90.firebaseapp.com",
@@ -60,9 +60,11 @@
       appId: "1:764985024020:web:62e152b71173d2f3c89101"
     };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-
     const auth = firebase.auth();
     const db = firebase.firestore();
+
+    // ✅ Giữ session login
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
     // 🔹 Toggle Forms
     function toggleRegister(){document.getElementById("loginForm").style.display="none";document.getElementById("registerForm").style.display="flex";}
@@ -81,7 +83,8 @@
         await db.collection("users").doc(cred.user.uid).set({
           username,email,balance:0,isAdmin:(username==="duc")
         });
-        alert("✅ Account created! Please login now.");toggleLogin();
+        alert("✅ Account created! Please login now.");
+        toggleLogin();
       }).catch(e=>alert("❌ "+e.message));
     }
 
@@ -94,9 +97,13 @@
       auth.signInWithEmailAndPassword(email,password).then(async cred=>{
         const doc=await db.collection("users").doc(cred.user.uid).get();
         if(!doc.exists) return alert("❌ User data not found!");
+
         const userData={uid:cred.user.uid,...doc.data()};
         localStorage.setItem("currentUser",JSON.stringify(userData));
-        alert("✅ Login successful!");window.location.href="index.html";
+        localStorage.setItem("loggedIn","true"); // ✅ lưu trạng thái login
+
+        alert("✅ Login successful!");
+        window.location.href="index.html";
       }).catch(e=>alert("❌ "+e.message));
     }
   </script>
