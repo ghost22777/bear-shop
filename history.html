@@ -14,6 +14,11 @@
     #historyList li:last-child { border-bottom:none; }
     h1 { color:#ffccff; text-shadow:0 0 10px #ff00ff; }
   </style>
+
+  <!-- ✅ Load Firebase SDK TRƯỚC -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <nav class="navbar">
@@ -29,12 +34,9 @@
   <h1>📜 Spending History</h1>
   <ul id="historyList"><li>⏳ Loading...</li></ul>
 
-  <!-- ✅ Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
+  <!-- ✅ Script logic đặt SAU khi Firebase đã load -->
   <script>
+    // ✅ Config Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyBUCFW2ffGXPBogDUyd1cDYEt15fHQiz9I",
       authDomain: "bearshop-49b90.firebaseapp.com",
@@ -53,75 +55,73 @@
     const adminLink = document.getElementById("adminLink");
     let currentUser = null;
 
-    // ✅ Xóa lịch sử cũ hơn 7 ngày
+    // ✅ Auto Clean History >7 ngày
     async function autoCleanHistory() {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      const oldLogs = await db.collection("history")
-        .where("createdAt", "<", sevenDaysAgo)
-        .get();
-
-      if (!oldLogs.empty) {
-        const batch = db.batch();
-        oldLogs.docs.forEach(doc => batch.delete(doc.ref));
-        await batch.commit();
-        console.log(`🗑️ AutoClean: Đã xóa ${oldLogs.size} log cũ hơn 7 ngày`);
-      }
+      try {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const oldLogs = await db.collection("history").where("createdAt", "<", sevenDaysAgo).get();
+        if (!oldLogs.empty) {
+          const batch = db.batch();
+          oldLogs.docs.forEach(doc => batch.delete(doc.ref));
+          await batch.commit();
+        }
+      } catch (err) { console.warn("AutoClean error:", err.message); }
     }
 
-    // ✅ Load User + History
+    // ✅ Load History
     auth.onAuthStateChanged(async (user) => {
       if (!user) return location.href = "login.html";
 
-      const docSnap = await db.collection("users").doc(user.uid).get();
-      if (!docSnap.exists) return auth.signOut().then(() => location.href = "login.html");
+      const userDoc = await db.collection("users").doc(user.uid).get();
+      if (!userDoc.exists) return auth.signOut().then(() => location.href = "login.html");
 
-      currentUser = { uid: user.uid, ...docSnap.data() };
+      currentUser = { uid: user.uid, ...userDoc.data() };
       renderUserUI();
-      if (currentUser.isAdmin) adminLink.style.display = "inline-block";
 
-      // 🟢 Gọi hàm xóa log cũ
+      if (currentUser.isAdmin) adminLink.style.display = "inline-block";
       await autoCleanHistory();
 
-      // ✅ Query history (với index createdAt)
-      const snap = await db.collection("history")
-        .where("userId", "==", currentUser.uid)
-        .orderBy("createdAt", "desc")
-        .get();
+      try {
+        const snap = await db.collection("history")
+          .where("userId", "==", currentUser.uid)
+          .orderBy("createdAt", "desc")
+          .limit(100)
+          .get();
 
-      if (snap.empty) {
-        list.innerHTML = "<li>⚠️ No history found.</li>";
-        return;
+        if (snap.empty) {
+          list.innerHTML = "<li>⚠️ No history found.</li>";
+          return;
+        }
+
+        list.innerHTML = "";
+        snap.forEach(doc => {
+          const e = doc.data();
+          const type = e.type || "unknown";
+          const msg = e.msg || "";
+          const date = e.createdAt ? e.createdAt.toDate().toLocaleString() : (e.date || "Unknown");
+          const color = type === "case" ? "#00ffff" : type === "buy" ? "lime" : "orange";
+          list.innerHTML += `
+            <li>
+              <b style="color:${color}">[${type.toUpperCase()}]</b>
+              <span style="color:#ffccff">(${date})</span> - ${msg}
+            </li>`;
+        });
+      } catch (err) {
+        list.innerHTML = `<li style="color:red">❌ Error loading history: ${err.message}</li>`;
       }
-
-      list.innerHTML = "";
-      snap.forEach(doc => {
-        const e = doc.data();
-        const type = e.type || "unknown";
-        const msg = e.msg || "";
-        const date = e.createdAt ? e.createdAt.toDate().toLocaleString() : "Unknown";
-        const color = type === "case" ? "#00ffff" : type === "buy" ? "lime" : "orange";
-
-        list.innerHTML += `
-          <li>
-            <b style="color:${color}">[${type.toUpperCase()}]</b>
-            <span style="color:#ffccff">(${date})</span> - ${msg}
-          </li>`;
-      });
     });
 
-    // ✅ UI Logout + Add Funds
     function renderUserUI() {
       userInfoSpan.innerHTML = `
         👤 ${currentUser.username} | 💰 $${(currentUser.balance || 0).toFixed(2)}
-        <button id="addFundsBtn" style="background:#0080ff;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;margin-left:5px;">Add Funds</button>
-        <button id="logoutBtn" style="background:red;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;margin-left:5px;">Logout</button>
+        <button id="addFundsBtn" style="background:#0080ff;color:white;border:none;padding:4px 10px;border-radius:4px;margin-left:5px;">Add Funds</button>
+        <button id="logoutBtn" style="background:red;color:white;border:none;padding:4px 10px;border-radius:4px;margin-left:5px;">Logout</button>
       `;
       document.getElementById("logoutBtn").onclick = () => auth.signOut().then(() => location.href = "login.html");
       document.getElementById("addFundsBtn").onclick = showAddFundsDialog;
     }
 
-    // ✅ Popup Add Funds
     function showAddFundsDialog() {
       if (document.getElementById("fundPopup")) return;
       const p = document.createElement("div");

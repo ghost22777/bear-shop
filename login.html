@@ -49,63 +49,73 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-  <script>
-    // ✅ Firebase Config
-    const firebaseConfig = {
-      apiKey: "AIzaSyBUCFW2ffGXPBogDUyd1cDYEt15fHQiz9I",
-      authDomain: "bearshop-49b90.firebaseapp.com",
-      projectId: "bearshop-49b90",
-      storageBucket: "bearshop-49b90.firebasestorage.app",
-      messagingSenderId: "764985024020",
-      appId: "1:764985024020:web:62e152b71173d2f3c89101"
-    };
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBUCFW2ffGXPBogDUyd1cDYEt15fHQiz9I",
+  authDomain: "bearshop-49b90.firebaseapp.com",
+  projectId: "bearshop-49b90",
+  storageBucket: "bearshop-49b90.firebasestorage.app",
+  messagingSenderId: "764985024020",
+  appId: "1:764985024020:web:62e152b71173d2f3c89101"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 
-    // ✅ Giữ session login
-    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+const auth = firebase.auth();
+const db = firebase.firestore();
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
-    // 🔹 Toggle Forms
-    function toggleRegister(){document.getElementById("loginForm").style.display="none";document.getElementById("registerForm").style.display="flex";}
-    function toggleLogin(){document.getElementById("loginForm").style.display="flex";document.getElementById("registerForm").style.display="none";}
+// 🔹 Toggle Forms
+function toggleRegister(){document.getElementById("loginForm").style.display="none";document.getElementById("registerForm").style.display="flex";}
+function toggleLogin(){document.getElementById("loginForm").style.display="flex";document.getElementById("registerForm").style.display="none";}
 
-    // 🔹 Register User
-    function register(){
-      const email=document.getElementById("regEmail").value.trim();
-      const username=document.getElementById("regUsername").value.trim();
-      const password=document.getElementById("regPassword").value.trim();
-      const confirm=document.getElementById("regConfirm").value.trim();
-      if(!email||!username||!password||!confirm) return alert("⚠️ Please fill all fields!");
-      if(password!==confirm) return alert("❌ Passwords do not match!");
+// ✅ Register User
+async function register(){
+  const email=document.getElementById("regEmail").value.trim();
+  const username=document.getElementById("regUsername").value.trim();
+  const password=document.getElementById("regPassword").value.trim();
+  const confirm=document.getElementById("regConfirm").value.trim();
 
-      auth.createUserWithEmailAndPassword(email,password).then(async cred=>{
-        await db.collection("users").doc(cred.user.uid).set({
-          username,email,balance:0,isAdmin:(username==="duc")
-        });
-        alert("✅ Account created! Please login now.");
-        toggleLogin();
-      }).catch(e=>alert("❌ "+e.message));
+  if(!email||!username||!password||!confirm) return alert("⚠️ Please fill all fields!");
+  if(password!==confirm) return alert("❌ Passwords do not match!");
+
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email,password);
+    await db.collection("users").doc(cred.user.uid).set({
+      username,email,balance:0,isAdmin:(username==="duc"),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    alert("✅ Account created! Please login now.");
+    toggleLogin();
+  } catch(e) {
+    alert("❌ "+e.message);
+  }
+}
+
+// ✅ Login User
+async function login(){
+  const email=document.getElementById("loginEmail").value.trim();
+  const password=document.getElementById("loginPassword").value.trim();
+  if(!email||!password) return alert("⚠️ Enter email & password!");
+
+  try {
+    const cred = await auth.signInWithEmailAndPassword(email,password);
+    const doc = await db.collection("users").doc(cred.user.uid).get();
+
+    if(!doc.exists) {
+      alert("❌ User data not found!");
+      await auth.signOut();
+      return;
     }
 
-    // 🔹 Login User
-    function login(){
-      const email=document.getElementById("loginEmail").value.trim();
-      const password=document.getElementById("loginPassword").value.trim();
-      if(!email||!password) return alert("⚠️ Enter email & password!");
+    const userData = { uid: cred.user.uid, ...doc.data() };
+    localStorage.setItem("currentUser", JSON.stringify(userData));
 
-      auth.signInWithEmailAndPassword(email,password).then(async cred=>{
-        const doc=await db.collection("users").doc(cred.user.uid).get();
-        if(!doc.exists) return alert("❌ User data not found!");
-
-        const userData={uid:cred.user.uid,...doc.data()};
-        localStorage.setItem("currentUser",JSON.stringify(userData));
-        localStorage.setItem("loggedIn","true"); // ✅ lưu trạng thái login
-
-        alert("✅ Login successful!");
-        window.location.href="index.html";
-      }).catch(e=>alert("❌ "+e.message));
-    }
-  </script>
+    alert("✅ Login successful!");
+    window.location.href="index.html";
+  } catch(e) {
+    alert("❌ "+e.message);
+  }
+}
+</script>
 </body>
 </html>

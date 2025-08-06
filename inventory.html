@@ -9,7 +9,6 @@
     .navbar { background:#1a001a; padding:12px 0; display:flex; justify-content:center; gap:25px; font-weight:bold; box-shadow:0 0 10px #ff00ff; }
     .navbar a { color:orange; text-decoration:none; transition:0.2s; }
     .navbar a:hover { color:#ff00ff; text-shadow:0 0 5px #ff00ff; }
-    .logo { font-size:20px; }
     h1 { color:#ffccff; text-shadow:0 0 10px #ff00ff; margin-top:15px; }
     .inventory { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:20px; padding:20px; max-width:1000px; margin:auto; }
     .inv-item { background:rgba(40,0,40,0.9); border:2px solid #ff00ff; border-radius:12px; padding:12px; box-shadow:0 0 15px #ff00ff55; text-align:center; transition:0.3s; position:relative; }
@@ -23,7 +22,7 @@
 </head>
 <body>
   <nav class="navbar">
-    <a href="index.html" class="logo rainbow-text">🐻 Bear Shop</a>
+    <a href="index.html" class="logo">🐻 Bear Shop</a>
     <a href="index.html">🎁 Case Opening</a>
     <a href="shop.html">🛒 Pet Shop</a>
     <a href="inventory.html">🎒 Inventory</a>
@@ -41,119 +40,131 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyBUCFW2ffGXPBogDUyd1cDYEt15fHQiz9I",
-      authDomain: "bearshop-49b90.firebaseapp.com",
-      projectId: "bearshop-49b90",
-      storageBucket: "bearshop-49b90.firebasestorage.app",
-      messagingSenderId: "764985024020",
-      appId: "1:764985024020:web:62e152b71173d2f3c89101",
-      measurementId: "G-D3DC6707R1"
-    };
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBUCFW2ffGXPBogDUyd1cDYEt15fHQiz9I",
+  authDomain: "bearshop-49b90.firebaseapp.com",
+  projectId: "bearshop-49b90",
+  storageBucket: "bearshop-49b90.firebasestorage.app",
+  messagingSenderId: "764985024020",
+  appId: "1:764985024020:web:62e152b71173d2f3c89101"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 
-    let currentUser = null;
-    let currentUserDocRef = null;
+const auth = firebase.auth();
+const db = firebase.firestore();
 
-    auth.onAuthStateChanged(async (user) => {
-      if (!user) return location.href = "login.html";
-      currentUserDocRef = db.collection("users").doc(user.uid);
-      const userDoc = await currentUserDocRef.get();
-      if (!userDoc.exists) return auth.signOut().then(() => location.href = "login.html");
+let currentUser = null;
+let userDocRef = null;
 
-      currentUser = { uid: user.uid, ...userDoc.data() };
-      if (currentUser.isAdmin) document.getElementById("adminLink").style.display = "inline-block";
-      renderUserUI();
-      loadInventory(user.uid);
+// ✅ Lắng nghe trạng thái đăng nhập
+auth.onAuthStateChanged(async (user) => {
+  if (!user) return location.href = "login.html";
+  userDocRef = db.collection("users").doc(user.uid);
+
+  // ✅ Luôn nghe thay đổi từ Firestore (Realtime Update)
+  userDocRef.onSnapshot(snap => {
+    if (!snap.exists) { auth.signOut(); return location.href = "login.html"; }
+    currentUser = { uid: user.uid, ...snap.data() };
+    renderUserUI();
+    if (currentUser.isAdmin) document.getElementById("adminLink").style.display = "inline-block";
+    loadInventory(user.uid);
+  });
+});
+
+// ✅ Render UI User
+function renderUserUI() {
+  document.getElementById("userInfo").innerHTML = `
+    👤 ${currentUser.username} | 💰 $${(currentUser.balance || 0).toFixed(2)}
+    <button id="addFundsBtn" style="background:#0080ff;color:white;padding:4px 10px;border:none;border-radius:4px;margin-left:5px;">Add Funds</button>
+    <button id="logoutBtn" style="background:red;color:white;padding:4px 10px;border:none;border-radius:4px;margin-left:5px;">Logout</button>`;
+  document.getElementById("addFundsBtn").onclick = showAddFundsDialog;
+  document.getElementById("logoutBtn").onclick = () => auth.signOut().then(() => location.href = "login.html");
+}
+
+// ✅ Popup Add Funds
+function showAddFundsDialog() {
+  if (document.getElementById("fundPopup")) return;
+  const p = document.createElement("div");
+  p.id = "fundPopup";
+  p.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#000c;padding:20px;color:white;border-radius:8px;box-shadow:0 0 15px #ff00ff;z-index:2000";
+  p.innerHTML = `<h2>Add Funds</h2>
+    <p>Contact admin on Discord: <a href="https://discord.gg/Cheapestgag" target="_blank" style="color:#00ffff">BearShop</a></p>
+    <button onclick="document.getElementById('fundPopup').remove()" style="margin-top:10px;background:#ff00ff;border:none;padding:6px 12px;border-radius:5px;color:white">Close</button>`;
+  document.body.appendChild(p);
+}
+
+// ✅ Load Inventory an toàn
+async function loadInventory(uid) {
+  const container = document.getElementById("inventoryContainer");
+  container.innerHTML = "<h3>⏳ Loading...</h3>";
+
+  try {
+    const snap = await db.collection("inventory").where("userId", "==", uid).get();
+
+    if (snap.empty) {
+      container.innerHTML = "<h3>⚠️ Your inventory is empty.</h3>";
+      return;
+    }
+
+    container.innerHTML = "";
+    snap.forEach(doc => {
+      const item = doc.data();
+      const img = item.type === "pet" ? `images/${item.item}.png` : "images/Sheckles.png";
+      container.innerHTML += `
+        <div class="inv-item">
+          <input type="checkbox" class="select-item" data-id="${doc.id}">
+          <img src="${img}" alt="${item.item}">
+          <h4>${item.item}</h4>
+        </div>`;
     });
+  } catch (err) {
+    container.innerHTML = `<h3 style="color:red">❌ Error loading inventory: ${err.message}</h3>`;
+  }
+}
 
-    function renderUserUI() {
-      const ui = document.getElementById("userInfo");
-      ui.innerHTML = `
-        👤 ${currentUser.username} | 💰 $${(currentUser.balance || 0).toFixed(2)}
-        <button id="addFundsBtn" style="background:#0080ff;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;margin-left:5px;">Add Funds</button>
-        <button id="logoutBtn" style="background:red;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;margin-left:5px;">Logout</button>
-      `;
-      document.getElementById("logoutBtn").onclick = () => auth.signOut().then(() => location.href = "login.html");
-      document.getElementById("addFundsBtn").onclick = showAddFundsDialog;
+// ✅ Withdraw Items
+async function withdrawSelected() {
+  const user = auth.currentUser;
+  if (!user) return alert("⚠️ Please login first!");
+
+  const selected = document.querySelectorAll(".select-item:checked");
+  if (!selected.length) return alert("⚠️ Select at least one item!");
+
+  const name = prompt("Enter your in-game name:");
+  if (!name) return;
+  const link = prompt("Enter your VIP server link:");
+  if (!link) return;
+
+  const ids = Array.from(selected).map(cb => cb.dataset.id);
+  const batch = db.batch();
+  const items = [];
+
+  for (const id of ids) {
+    const ref = db.collection("inventory").doc(id);
+    const doc = await ref.get();
+    if (doc.exists && doc.data().userId === user.uid) { // ✅ Ngăn user xóa item của người khác
+      items.push(doc.data().item);
+      batch.delete(ref);
     }
+  }
 
-    function showAddFundsDialog() {
-      if (document.getElementById("fundPopup")) return;
-      const p = document.createElement("div");
-      p.id = "fundPopup";
-      p.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#000c;padding:20px;color:white;border-radius:8px;box-shadow:0 0 15px #ff00ff;z-index:2000";
-      p.innerHTML = `
-        <h2>Add Funds</h2>
-        <p>Contact admin on Discord: <a href="https://discord.gg/Cheapestgag" target="_blank" style="color:#00ffff">BearShop</a></p>
-        <button onclick="document.getElementById('fundPopup').remove()" style="margin-top:10px;background:#ff00ff;border:none;padding:6px 12px;border-radius:5px;color:white">Close</button>
-      `;
-      document.body.appendChild(p);
-    }
+  if (!items.length) return alert("⚠️ No valid items found.");
 
-    async function loadInventory(uid) {
-      const container = document.getElementById("inventoryContainer");
-      container.innerHTML = "<h3>⏳ Loading...</h3>";
-      const snapshot = await db.collection("inventory").where("userId", "==", uid).get();
-      if (snapshot.empty) {
-        container.innerHTML = "<h3>⚠️ Your inventory is empty.</h3>";
-        return;
-      }
-      container.innerHTML = "";
-      snapshot.forEach(doc => {
-        const item = doc.data();
-        const imgSrc = item.type === "pet" ? `images/${item.item}.png` : "images/Sheckles.png";
-        container.innerHTML += `
-          <div class="inv-item">
-            <input type="checkbox" class="select-item" data-id="${doc.id}">
-            <img src="${imgSrc}" alt="${item.item}">
-            <h4>${item.item}</h4>
-          </div>
-        `;
-      });
-    }
+  await db.collection("withdraws").add({
+    userId: user.uid,
+    username: currentUser.username,
+    item: items.join(", "),
+    name,
+    link,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    status: "pending"
+  });
 
-    async function withdrawSelected() {
-      const user = auth.currentUser;
-      if (!user) return alert("⚠️ Please login first!");
-      const selected = document.querySelectorAll(".select-item:checked");
-      if (!selected.length) return alert("⚠️ Please select at least one item!");
-
-      const name = prompt("Enter your in-game name:");
-      if (!name) return;
-      const link = prompt("Enter your VIP server link:");
-      if (!link) return;
-
-      const ids = Array.from(selected).map(cb => cb.dataset.id);
-      const batch = db.batch();
-      const itemsData = [];
-
-      for (const id of ids) {
-        const ref = db.collection("inventory").doc(id);
-        const doc = await ref.get();
-        if (doc.exists) {
-          itemsData.push(doc.data().item);
-          batch.delete(ref);
-        }
-      }
-
-      if (!itemsData.length) return alert("⚠️ Selected items not found.");
-      await db.collection("withdraws").add({
-        userId: user.uid,
-        username: currentUser.username,
-        item: itemsData.join(", "),
-        name,
-        link,
-        date: new Date().toLocaleString(),
-        status: "pending"
-      });
-      await batch.commit();
-      alert("✅ Withdraw request sent successfully!");
-      loadInventory(user.uid);
-    }
-  </script>
+  await batch.commit();
+  alert("✅ Withdraw request sent successfully!");
+  loadInventory(user.uid);
+}
+</script>
 </body>
 </html>

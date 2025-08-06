@@ -2,34 +2,28 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>⚙️ Admin Panel - Bear Shop (v2)</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>⚙️ Admin Panel - Bear Shop (Secure)</title>
   <style>
-    body { background:#150015; color:white; font-family:Arial,sans-serif; margin:0; text-align:center; }
+    body { background:#150015; color:white; font-family:Arial,sans-serif; text-align:center; margin:0; }
     h1, h2, h3 { color:#ffccff; text-shadow:0 0 10px #ff00ff; }
     table { width:90%; margin:20px auto; border-collapse:collapse; background:#1c1c1c; box-shadow:0 0 10px #ff00ff; }
-    th, td { padding:10px; border:1px solid #333; }
+    th, td { border:1px solid #333; padding:8px; }
     th { background:#ff00ff; color:black; }
-    td a { color:cyan; text-decoration:none; word-break:break-word; }
-    td a:hover { text-decoration:underline; }
-    button { background:limegreen; color:white; border:none; padding:5px 10px; cursor:pointer; border-radius:5px; margin:2px 0; }
+    button { background:limegreen; color:white; border:none; padding:5px 10px; margin:2px; border-radius:5px; cursor:pointer; }
     button:hover { background:green; }
     .danger { background:red !important; }
-    .money-box, .users-box { width:90%; margin:20px auto; padding:15px; background:#1c1c1c; border-radius:8px; box-shadow:0 0 10px #00ffea; text-align:left; }
-    .user-card { border:1px solid #ff00ff; margin:10px 0; padding:10px; border-radius:8px; }
-    .user-card h3 { margin:0 0 5px 0; }
-    .user-pets li, .user-sheckles li { list-style:disc; margin-bottom:4px; }
-    .user-pets button, .user-sheckles button { background:red; margin-left:10px; padding:2px 6px; font-size:12px; border-radius:4px; }
+    .user-card { border:1px solid #ff00ff; padding:10px; margin:10px auto; width:90%; background:#1c1c1c; border-radius:8px; text-align:left; }
+    ul { padding-left:20px; }
   </style>
+
+  <!-- ✅ Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
-<h1>⚙️ Admin Panel (Full Control)</h1>
-
-<!-- ✅ Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<h1>⚙️ Admin Panel (Secured)</h1>
 
 <script>
 const firebaseConfig = {
@@ -40,112 +34,106 @@ const firebaseConfig = {
   messagingSenderId:"764985024020",
   appId:"1:764985024020:web:62e152b71173d2f3c89101"
 };
-if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
-const auth=firebase.auth(),db=firebase.firestore();
+if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth(), db=firebase.firestore();
 
 let currentUser=null;
 
-auth.onAuthStateChanged(async user=>{
-  if(!user){alert("🚫 Access Denied! Please login.");location.href="login.html";return;}
-  currentUser=user;
-  const doc=await db.collection("users").doc(user.uid).get();
-  if(!doc.exists||!doc.data().isAdmin){alert("🚫 Admin Only!");location.href="index.html";}
-  renderUsers();renderWithdraws();
+// ✅ Check admin login
+auth.onAuthStateChanged(async (user)=>{
+  if(!user){alert("🚫 Please login first.");location.href="login.html";return;}
+  const snap=await db.collection("users").doc(user.uid).get();
+  if(!snap.exists || !snap.data().isAdmin){alert("🚫 Access denied!");location.href="index.html";return;}
+  currentUser={uid:user.uid,...snap.data()};
+  loadUsers(); loadWithdraws();
 });
 
-// 🔹 Lấy dữ liệu
-async function getUsers(){const s=await db.collection("users").get();return s.docs.map(d=>({id:d.id,...d.data()}));}
-async function getInventory(){const s=await db.collection("inventory").get();return s.docs.map(d=>({id:d.id,...d.data()}));}
-async function getWithdraws(){const s=await db.collection("withdraws").get();return s.docs.map(d=>({id:d.id,...d.data()}));}
+// ✅ Fetch helpers
+async function getUsers(){return (await db.collection("users").get()).docs.map(d=>({id:d.id,...d.data()}));}
+async function getInventory(){return (await db.collection("inventory").get()).docs.map(d=>({id:d.id,...d.data()}));}
+async function getWithdraws(){return (await db.collection("withdraws").get()).docs.map(d=>({id:d.id,...d.data()}));}
 
-// 🔹 Render Users
-async function renderUsers(){
-  const c=document.getElementById("userList");c.innerHTML="⏳ Loading...";
-  const users=await getUsers(),inv=await getInventory();c.innerHTML="";
-  users.forEach(u=>{
-    const pets=inv.filter(i=>i.userId===u.id&&i.type==="pet");
-    const sheck=inv.filter(i=>i.userId===u.id&&i.type==="money");
-    const div=document.createElement("div");
-    div.className="user-card";
-    div.innerHTML=`
-      <h3>${u.username||u.email} - Balance: $${(u.balance||0).toFixed(2)}</h3>
-      <button onclick="resetBalance('${u.id}')">Reset Balance</button>
-      <button class="danger" onclick="deleteUser('${u.id}')">🗑️ Delete User (All Data)</button>
-
-      <h4>🐾 Pets:</h4>
-      <ul>${pets.length?pets.map(p=>`<li>${p.item}<button onclick="deletePet('${p.id}')">Delete</button></li>`).join(""):"<li>No pets</li>"}</ul>
-      <button onclick="deleteAllPets('${u.id}')">🗑️ Delete All Pets</button>
-
-      <h4>💰 Sheckles:</h4>
-      <ul>${sheck.length?sheck.map(s=>`<li>${s.item}<button onclick="deleteSheckle('${s.id}')">Delete</button></li>`).join(""):"<li>No sheckles</li>"}</ul>
-      <button onclick="deleteAllSheckles('${u.id}')">🗑️ Delete All Sheckles</button>
-    `;
-    c.appendChild(div);
-  });
+// ✅ Render Users
+async function loadUsers(){
+  const c=document.getElementById("userList");
+  c.innerHTML="⏳ Loading...";
+  try{
+    const users=await getUsers(), inv=await getInventory(); c.innerHTML="";
+    users.forEach(u=>{
+      const pets=inv.filter(i=>i.userId===u.id&&i.type==="pet");
+      const sheck=inv.filter(i=>i.userId===u.id&&i.type==="money");
+      const div=document.createElement("div");
+      div.className="user-card";
+      div.innerHTML=`
+        <h3>${u.username||u.email} - Balance: $${(u.balance||0).toFixed(2)}</h3>
+        <button onclick="resetBalance('${u.id}')">Reset Balance</button>
+        <button class="danger" onclick="deleteUser('${u.id}')">🗑️ Delete User (All Data)</button>
+        <h4>🐾 Pets:</h4>
+        <ul>${pets.length?pets.map(p=>`<li>${p.item} <button onclick="deleteItem('${p.id}')">❌</button></li>`).join(""):"<li>No pets</li>"}</ul>
+        <h4>💰 Sheckles:</h4>
+        <ul>${sheck.length?sheck.map(s=>`<li>${s.item} <button onclick="deleteItem('${s.id}')">❌</button></li>`).join(""):"<li>No sheckles</li>"}</ul>
+      `;
+      c.appendChild(div);
+    });
+  }catch(e){c.innerHTML=`<p style="color:red">❌ Error: ${e.message}</p>`;}
 }
 
-// 🔹 Chức năng xóa dữ liệu User toàn bộ
+// ✅ Admin Actions
+async function resetBalance(id){await db.collection("users").doc(id).update({balance:0});alert("✅ Balance reset!");loadUsers();}
+async function deleteItem(id){await db.collection("inventory").doc(id).delete();alert("✅ Item deleted.");loadUsers();}
 async function deleteUser(uid){
-  if(!confirm("⚠️ Are you sure? This will delete the user and ALL their data!")) return;
-  // Xóa inventory
-  const invSnap=await db.collection("inventory").where("userId","==",uid).get();
-  const batch=db.batch();invSnap.forEach(d=>batch.delete(d.ref));await batch.commit();
-  // Xóa withdraws
-  const wdSnap=await db.collection("withdraws").where("userId","==",uid).get();
-  const b2=db.batch();wdSnap.forEach(d=>b2.delete(d.ref));await b2.commit();
-  // Xóa history
-  const hSnap=await db.collection("history").where("userId","==",uid).get();
-  const b3=db.batch();hSnap.forEach(d=>b3.delete(d.ref));await b3.commit();
-  // Xóa user
-  await db.collection("users").doc(uid).delete();
-  alert("✅ User and all related data deleted!");
-  renderUsers();
+  if(!confirm("⚠️ Delete this user and all their data?"))return;
+  const batch=db.batch();
+  const inv=await db.collection("inventory").where("userId","==",uid).get();inv.forEach(d=>batch.delete(d.ref));
+  const his=await db.collection("history").where("userId","==",uid).get();his.forEach(d=>batch.delete(d.ref));
+  const wds=await db.collection("withdraws").where("userId","==",uid).get();wds.forEach(d=>batch.delete(d.ref));
+  await batch.commit(); await db.collection("users").doc(uid).delete();
+  alert("✅ User deleted."); loadUsers();
+}
+async function addMoney(){
+  const name=document.getElementById("targetUser").value.trim();
+  const amount=parseFloat(document.getElementById("amount").value);
+  if(!name||isNaN(amount)||amount<=0)return alert("⚠️ Enter valid data!");
+  const users=await getUsers(); const u=users.find(x=>x.username===name||x.email===name);
+  if(!u)return alert("❌ User not found");
+  await db.collection("users").doc(u.id).update({balance:(u.balance||0)+amount});
+  alert(`✅ Added $${amount} to ${u.username}`); loadUsers();
 }
 
-// 🔹 Các chức năng khác
-async function resetBalance(id){await db.collection("users").doc(id).update({balance:0});alert("✅ Balance reset!");renderUsers();}
-async function deletePet(id){await db.collection("inventory").doc(id).delete();alert("✅ Pet deleted.");renderUsers();}
-async function deleteSheckle(id){await db.collection("inventory").doc(id).delete();alert("✅ Sheckle deleted.");renderUsers();}
-async function deleteAllPets(uid){const s=await db.collection("inventory").where("userId","==",uid).where("type","==","pet").get();const b=db.batch();s.forEach(d=>b.delete(d.ref));await b.commit();alert("✅ All pets deleted.");renderUsers();}
-async function deleteAllSheckles(uid){const s=await db.collection("inventory").where("userId","==",uid).where("type","==","money").get();const b=db.batch();s.forEach(d=>b.delete(d.ref));await b.commit();alert("✅ All sheckles deleted.");renderUsers();}
-async function addMoney(){const name=document.getElementById("targetUser").value.trim(),amount=parseFloat(document.getElementById("amount").value);if(!name||isNaN(amount)||amount<=0)return alert("⚠️ Enter valid data!");const users=await getUsers();const u=users.find(x=>x.username===name||x.email===name);if(!u)return alert("❌ User not found!");await db.collection("users").doc(u.id).update({balance:(u.balance||0)+amount});alert(`✅ Added $${amount} to ${u.username}`);renderUsers();}
-
-// 🔹 Withdraw Requests
-async function renderWithdraws(){
-  const t=document.getElementById("withdrawTable");t.innerHTML="";
-  const reqs=await getWithdraws();
-  if(!reqs.length){t.innerHTML=`<tr><td colspan="6" style="color:gray;">⚠️ No withdraw requests.</td></tr>`;return;}
+// ✅ Withdraw Requests
+async function loadWithdraws(){
+  const t=document.getElementById("withdrawTable"); t.innerHTML="";
+  const reqs=await getWithdraws(); 
+  if(!reqs.length){t.innerHTML="<tr><td colspan='6'>⚠️ No requests</td></tr>";return;}
   reqs.forEach(r=>{
     const tr=document.createElement("tr");
     tr.innerHTML=`
       <td>${r.username||"Unknown"}</td>
       <td>${r.item}</td>
       <td>${r.name}</td>
-      <td><a href="${r.link}" target="_blank">${r.link}</a></td>
+      <td><a href="${r.link}" target="_blank">VIP Link</a></td>
       <td>${r.status||"pending"}</td>
-      <td><button onclick="markDone('${r.id}')">✅ Done & Remove</button></td>`;
+      <td><button onclick="markDone('${r.id}')">✅ Done</button></td>
+    `;
     t.appendChild(tr);
   });
 }
-async function markDone(id){await db.collection("withdraws").doc(id).delete();alert("✅ Request removed.");renderWithdraws();}
+async function markDone(id){await db.collection("withdraws").doc(id).delete();alert("✅ Request removed.");loadWithdraws();}
 </script>
 
-<!-- ✅ UI -->
-<div class="money-box">
-  <h3>💰 Add Money to User</h3>
-  <input type="text" id="targetUser" placeholder="Enter username or email">
+<div style="width:90%;margin:20px auto;background:#1c1c1c;padding:10px;border-radius:8px;box-shadow:0 0 10px #00ffff;">
+  <h3>💰 Add Money</h3>
+  <input type="text" id="targetUser" placeholder="Username or Email">
   <input type="number" id="amount" placeholder="Amount">
-  <button onclick="addMoney()">✅ Add Money</button>
+  <button onclick="addMoney()">✅ Add</button>
 </div>
 
-<div class="users-box">
-  <h2>👥 Manage Users</h2>
-  <div id="userList"></div>
-</div>
+<h2>👥 Users</h2>
+<div id="userList"></div>
 
 <h2>📋 Withdraw Requests</h2>
 <table>
-<thead><tr><th>User</th><th>Item</th><th>In-Game Name</th><th>VIP Link</th><th>Status</th><th>Action</th></tr></thead>
+<thead><tr><th>User</th><th>Item</th><th>Name</th><th>Link</th><th>Status</th><th>Action</th></tr></thead>
 <tbody id="withdrawTable"></tbody>
 </table>
 
