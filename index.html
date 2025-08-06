@@ -53,6 +53,9 @@ const firebaseConfig={apiKey:"AIzaSyBUCFW2ffGXPBogDUyd1cDYEt15fHQiz9I",authDomai
 if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth(),db=firebase.firestore();
 
+// ✅ Giữ session đăng nhập
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.error);
+
 let currentUser=null,userDocRef=null;
 const strip=document.getElementById("caseStrip");
 const btn=document.getElementById("openCase");
@@ -60,14 +63,18 @@ const result=document.getElementById("result");
 const casePrice=1,itemWidth=120,containerWidth=strip.parentElement.offsetWidth;
 let spinning=false,wheel=1;
 
+// ✅ Kiểm tra login (có delay để tránh redirect sớm)
 auth.onAuthStateChanged(async u=>{
-  if(!u) return location.href="login.html";
+  if(!u){
+    setTimeout(()=>{if(!auth.currentUser)location.href="login.html";},1000);
+    return;
+  }
   userDocRef=db.collection("users").doc(u.uid);
   const d=await userDocRef.get();
   if(!d.exists){alert("User data not found!");auth.signOut();return location.href="login.html";}
   currentUser={uid:u.uid,...d.data()};
   renderUserUI();
-  btn.disabled=false; // ✅ Enable nút khi user đã load xong
+  btn.disabled=false; 
   if(currentUser.isAdmin)document.getElementById("adminLink").style.display="inline-block";
   createMainStrip(false,0);
 });
