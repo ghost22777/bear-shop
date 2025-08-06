@@ -5,22 +5,22 @@
   <title>🎯 Lucky Pet Case - Bear Shop</title>
   <link rel="stylesheet" href="style.css" />
   <style>
-    body{background:#150015;color:white;font-family:Arial,sans-serif;margin:0;text-align:center}
-    .navbar{background:#1a001a;padding:12px 0;display:flex;justify-content:center;gap:25px;font-weight:bold;box-shadow:0 0 10px #ff00ff}
-    .navbar a{color:orange;text-decoration:none;transition:0.2s}
-    .navbar a:hover{color:#ff00ff;text-shadow:0 0 5px #ff00ff}
-    h1{color:#ffccff;text-shadow:0 0 10px #ff00ff}
-    .case-container{width:85%;margin:25px auto;min-height:140px;background:rgba(40,0,40,0.9);border:3px solid #ff00ff;border-radius:10px;overflow:hidden;box-shadow:0 0 20px #ff00ff;position:relative}
-    .case-strip{display:flex}
-    .item{width:120px;text-align:center;background:#220022;border-right:2px solid #ff00ff55}
-    .item img{width:100px;height:100px;border-radius:6px}
-    .item span{display:block;font-size:13px;color:#ffccff}
-    .center-line{position:absolute;top:0;left:50%;width:3px;height:100%;background:yellow;box-shadow:0 0 10px yellow;transform:translateX(-50%);z-index:9}
-    .case-btn{margin:20px auto;background:#ff00ff;color:white;border:none;padding:12px 30px;font-weight:bold;border-radius:8px;font-size:18px;cursor:pointer;box-shadow:0 0 15px #ff00ff;transition:0.2s;display:block;width:200px}
-    .case-btn:hover{background:#ff33ff;box-shadow:0 0 25px #ff00ff}
-    #result{font-size:24px;font-weight:bold;color:#00ffea;text-shadow:0 0 10px #00fff2;margin-top:15px}
-    .neon-fly{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:28px;color:#fff;text-shadow:0 0 10px #ff00ff;animation:flyUp 1.5s forwards;z-index:1000}
-    @keyframes flyUp{0%{opacity:1}100%{opacity:0;transform:translate(-50%,-150%) scale(1.3)}}
+    body { background:#150015; color:white; font-family:Arial,sans-serif; margin:0; text-align:center; }
+    .navbar { background:#1a001a; padding:12px 0; display:flex; justify-content:center; gap:25px; font-weight:bold; box-shadow:0 0 10px #ff00ff; }
+    .navbar a { color:orange; text-decoration:none; transition:0.2s; }
+    .navbar a:hover { color:#ff00ff; text-shadow:0 0 5px #ff00ff; }
+    h1 { color:#ffccff; text-shadow:0 0 10px #ff00ff; }
+    .case-container { width:85%; margin:25px auto; min-height:140px; background:rgba(40,0,40,0.9); border:3px solid #ff00ff; border-radius:10px; overflow:hidden; box-shadow:0 0 20px #ff00ff; position:relative; }
+    .case-strip { display:flex; }
+    .item { width:120px; text-align:center; background:#220022; border-right:2px solid #ff00ff55; }
+    .item img { width:100px; height:100px; border-radius:6px; }
+    .item span { display:block; font-size:13px; color:#ffccff; }
+    .center-line { position:absolute; top:0; left:50%; width:3px; height:100%; background:yellow; box-shadow:0 0 10px yellow; transform:translateX(-50%); z-index:9; }
+    .case-btn { margin:20px auto; background:#ff00ff; color:white; border:none; padding:12px 30px; font-weight:bold; border-radius:8px; font-size:18px; cursor:pointer; box-shadow:0 0 15px #ff00ff; transition:0.2s; display:block; width:200px; }
+    .case-btn:hover { background:#ff33ff; box-shadow:0 0 25px #ff00ff; }
+    #result { font-size:24px; font-weight:bold; color:#00ffea; text-shadow:0 0 10px #00fff2; margin-top:15px; }
+    .neon-fly { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); font-size:28px; color:#fff; text-shadow:0 0 10px #ff00ff; animation:flyUp 1.5s forwards; z-index:1000; }
+    @keyframes flyUp { 0%{opacity:1} 100%{opacity:0; transform:translate(-50%,-150%) scale(1.3)} }
   </style>
 </head>
 <body>
@@ -50,104 +50,95 @@
 
 <script>
 const firebaseConfig = {
-  apiKey:"AIzaSyBUCFW2ffGXPBogDUyd1cDYEt15fHQiz9I",
-  authDomain:"bearshop-49b90.firebaseapp.com",
-  projectId:"bearshop-49b90",
-  storageBucket:"bearshop-49b90.firebasestorage.app",
-  messagingSenderId:"764985024020",
-  appId:"1:764985024020:web:62e152b71173d2f3c89101"
+  apiKey: "AIzaSyBUCFW2ffGXPBogDUyd1cDYEt15fHQiz9I",
+  authDomain: "bearshop-49b90.firebaseapp.com",
+  projectId: "bearshop-49b90",
+  storageBucket: "bearshop-49b90.firebasestorage.app",
+  messagingSenderId: "764985024020",
+  appId: "1:764985024020:web:62e152b71173d2f3c89101"
 };
-if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
-const auth=firebase.auth(),db=firebase.firestore();
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth(), db = firebase.firestore();
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.error);
 
-let currentUser=null,userDocRef=null;
-const strip=document.getElementById("caseStrip"),btn=document.getElementById("openCase"),result=document.getElementById("result");
-const casePrice=1,itemWidth=120,containerWidth=strip.parentElement.offsetWidth;
-let spinning=false,wheel=1;
+let currentUser = null, userDocRef = null;
+const strip = document.getElementById("caseStrip"), btn = document.getElementById("openCase"), result = document.getElementById("result");
+const casePrice = 1, itemWidth = 120, containerWidth = strip.parentElement.offsetWidth;
+let spinning = false, wheel = 1;
 
-// ✅ Giữ user từ localStorage nếu có
-const savedUser=JSON.parse(localStorage.getItem("currentUser"));
-if(savedUser){
-  currentUser=savedUser;
-  userDocRef=db.collection("users").doc(savedUser.uid);
-  renderUserUI();btn.disabled=false;
-  if(currentUser.isAdmin)document.getElementById("adminLink").style.display="inline-block";
-  createMainStrip(false,0);
-}else{
-  auth.onAuthStateChanged(async u=>{
-    if(!u)return location.href="login.html";
-    userDocRef=db.collection("users").doc(u.uid);
-    const d=await userDocRef.get();
-    if(!d.exists){alert("User data not found!");auth.signOut();return location.href="login.html";}
-    currentUser={uid:u.uid,...d.data()};
-    localStorage.setItem("currentUser",JSON.stringify(currentUser));
-    renderUserUI();btn.disabled=false;
-    if(currentUser.isAdmin)document.getElementById("adminLink").style.display="inline-block";
-    createMainStrip(false,0);
-  });
-}
+// ✅ Kiểm tra đăng nhập + luôn fetch dữ liệu mới từ Firestore
+auth.onAuthStateChanged(async (u) => {
+  if (!u) return location.href = "login.html";
+  userDocRef = db.collection("users").doc(u.uid);
+  const snap = await userDocRef.get();
+  if (!snap.exists) { alert("❌ User data not found!"); auth.signOut(); return location.href = "login.html"; }
+  currentUser = { uid: u.uid, ...snap.data() };
+  localStorage.setItem("currentUser", JSON.stringify(currentUser));
+  renderUserUI();
+  btn.disabled = false;
+  if (currentUser.isAdmin) document.getElementById("adminLink").style.display = "inline-block";
+  createMainStrip(false, 0);
+});
 
 // ✅ UI
-function renderUserUI(){
-  const ui=document.getElementById("userInfo");
-  ui.innerHTML=`
-    👤 ${currentUser.username} | 💰 $${(currentUser.balance||0).toFixed(2)}
+function renderUserUI() {
+  document.getElementById("userInfo").innerHTML = `
+    👤 ${currentUser.username} | 💰 $${(currentUser.balance || 0).toFixed(2)}
     <button id="addFundsBtn" style="background:#0080ff;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;margin-left:5px;">Add Funds</button>
     <button id="logoutBtn" style="background:red;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;margin-left:5px;">Logout</button>`;
-  document.getElementById("addFundsBtn").onclick=showAddFundsDialog;
-  document.getElementById("logoutBtn").onclick=()=>{auth.signOut();localStorage.removeItem("currentUser");location.href="login.html";};
+  document.getElementById("addFundsBtn").onclick = showAddFundsDialog;
+  document.getElementById("logoutBtn").onclick = () => { auth.signOut(); localStorage.removeItem("currentUser"); location.href = "login.html"; };
 }
 
 // ✅ Popup Add Funds
-function showAddFundsDialog(){
-  if(document.getElementById("fundPopup"))return;
-  const p=document.createElement("div");
-  p.id="fundPopup";
-  p.style.cssText="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#000c;padding:20px;color:white;border-radius:8px;box-shadow:0 0 15px #ff00ff;z-index:2000";
-  p.innerHTML=`<h2>Add Funds</h2><p>Contact admin on Discord: <a href="https://discord.gg/Cheapestgag" target="_blank" style="color:#00ffff">BearShop</a></p>
+function showAddFundsDialog() {
+  if (document.getElementById("fundPopup")) return;
+  const p = document.createElement("div");
+  p.id = "fundPopup";
+  p.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#000c;padding:20px;color:white;border-radius:8px;box-shadow:0 0 15px #ff00ff;z-index:2000";
+  p.innerHTML = `<h2>Add Funds</h2><p>Contact admin on Discord: <a href="https://discord.gg/Cheapestgag" target="_blank" style="color:#00ffff">BearShop</a></p>
   <button onclick="document.getElementById('fundPopup').remove()" style="margin-top:10px;background:#ff00ff;border:none;padding:6px 12px;border-radius:5px;color:white">Close</button>`;
   document.body.appendChild(p);
 }
 
 // ✅ DB Helpers
-async function updateBalance(v){const nb=(currentUser.balance||0)+v;await userDocRef.update({balance:nb});currentUser.balance=nb;localStorage.setItem("currentUser",JSON.stringify(currentUser));renderUserUI();}
-async function addInv(n,t){await db.collection("inventory").add({userId:currentUser.uid,username:currentUser.username,item:n,type:t,createdAt:firebase.firestore.FieldValue.serverTimestamp()});}
-async function saveHist(t,m){await db.collection("history").add({userId:currentUser.uid,username:currentUser.username,type:t,msg:m,createdAt:firebase.firestore.FieldValue.serverTimestamp()});}
+async function fetchUser() { const d = await userDocRef.get(); currentUser = { uid: currentUser.uid, ...d.data() }; localStorage.setItem("currentUser", JSON.stringify(currentUser)); renderUserUI(); }
+async function updateBalance(v) { await userDocRef.update({ balance: (currentUser.balance || 0) + v }); await fetchUser(); }
+async function addInv(n, t) { await db.collection("inventory").add({ userId: currentUser.uid, username: currentUser.username, item: n, type: t, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+async function saveHist(t, m) { await db.collection("history").add({ userId: currentUser.uid, username: currentUser.username, type: t, msg: m, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); }
 
 // ✅ Spin Logic
-function createMainStrip(p,i){strip.innerHTML="";for(let x=0;x<80;x++)strip.innerHTML+=`<div class="item"><img src="${x===i&&p?'images/pet_reward.png':'images/Sheckles.png'}"><span>${x===i&&p?'Pet Reward':'x1 700T+ Sheckles'}</span></div>`;}
-function createPetStrip(){strip.innerHTML="";for(let x=0;x<80;x++)strip.innerHTML+=`<div class="item"><img src="images/pet_reward.png"><span>Pet Reward</span></div>`;}
-function spin(t,cb){let pos=0,v=90;function anim(){pos+=v;v*=0.965;if(v<0.5||pos>=t){strip.style.transform=`translateX(-${t}px)`;cb();return;}strip.style.transform=`translateX(-${pos}px)`;requestAnimationFrame(anim);}anim();}
-function floating(t){const d=document.createElement("div");d.className="neon-fly";d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),1500);}
+function createMainStrip(p, i) { strip.innerHTML = ""; for (let x = 0; x < 80; x++) strip.innerHTML += `<div class="item"><img src="${x === i && p ? 'images/pet_reward.png' : 'images/Sheckles.png'}"><span>${x === i && p ? 'Pet Reward' : 'x1 700T+ Sheckles'}</span></div>`; }
+function createPetStrip() { strip.innerHTML = ""; for (let x = 0; x < 80; x++) strip.innerHTML += `<div class="item"><img src="images/pet_reward.png"><span>Pet Reward</span></div>`; }
+function spin(t, cb) { let pos = 0, v = 90; (function anim() { pos += v; v *= 0.965; strip.style.transform = `translateX(-${pos}px)`; if (v < 0.5 || pos >= t) { strip.style.transform = `translateX(-${t}px)`; cb(); return; } requestAnimationFrame(anim); })(); }
+function floating(t) { const d = document.createElement("div"); d.className = "neon-fly"; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 1500); }
 
-// ✅ Button
-btn.onclick=async()=>{
- if(!currentUser)return alert("⚠️ User data is loading...");
- if(spinning)return;
- if((currentUser.balance||0)<casePrice)return alert("❌ Not enough balance!");
- spinning=true;btn.disabled=true;btn.style.opacity="0.5";result.textContent="";
- if(wheel===1){
-   await updateBalance(-casePrice);
-   const win=Math.random()<0.1,idx=Math.floor(Math.random()*50)+15;
-   createMainStrip(win,idx);
-   spin(idx*itemWidth-containerWidth/2+itemWidth/2,async()=>{
-     if(win){
-       wheel=2;btn.textContent="SPIN PET WHEEL";createPetStrip();
-       const pIdx=Math.floor(Math.random()*50)+15;
-       spin(pIdx*itemWidth-containerWidth/2+itemWidth/2,async()=>{
-         const pet=petList[Math.floor(Math.random()*petList.length)];
-         await addInv(pet.name,"pet");await saveHist("case",`Got pet ${pet.name}`);
-         result.textContent=`🎉 You got pet: ${pet.name}`;floating(`🎉 ${pet.name}`);
-         wheel=1;btn.textContent="OPEN CASE ($1.00)";spinning=false;btn.disabled=false;btn.style.opacity="1";
-       });
-     }else{
-       await addInv("x1 700T+ Sheckles","money");await saveHist("case","Got x1 700T+ Sheckles");
-       result.textContent="💰 You got x1 700T+ Sheckles";floating("💰 Sheckles");
-       wheel=1;btn.textContent="OPEN CASE ($1.00)";spinning=false;btn.disabled=false;btn.style.opacity="1";
-     }
-   });
- }
+// ✅ Spin Button
+btn.onclick = async () => {
+  if (!currentUser) return alert("⚠️ User data is loading...");
+  if (spinning) return;
+  if ((currentUser.balance || 0) < casePrice) return alert("❌ Not enough balance!");
+  spinning = true; btn.disabled = true; btn.style.opacity = "0.5"; result.textContent = "";
+  await updateBalance(-casePrice);
+  const win = Math.random() < 0.1, idx = Math.floor(Math.random() * 50) + 15;
+  createMainStrip(win, idx);
+  spin(idx * itemWidth - containerWidth / 2 + itemWidth / 2, async () => {
+    if (win) {
+      wheel = 2; btn.textContent = "SPIN PET WHEEL"; createPetStrip();
+      const pIdx = Math.floor(Math.random() * 50) + 15;
+      spin(pIdx * itemWidth - containerWidth / 2 + itemWidth / 2, async () => {
+        const pet = petList[Math.floor(Math.random() * petList.length)];
+        await addInv(pet.name, "pet"); await saveHist("case", `Got pet ${pet.name}`);
+        result.textContent = `🎉 You got pet: ${pet.name}`; floating(`🎉 ${pet.name}`);
+        wheel = 1; btn.textContent = "OPEN CASE ($1.00)"; spinning = false; btn.disabled = false; btn.style.opacity = "1";
+      });
+    } else {
+      await addInv("x1 700T+ Sheckles", "money"); await saveHist("case", "Got x1 700T+ Sheckles");
+      result.textContent = "💰 You got x1 700T+ Sheckles"; floating("💰 Sheckles");
+      wheel = 1; btn.textContent = "OPEN CASE ($1.00)"; spinning = false; btn.disabled = false; btn.style.opacity = "1";
+    }
+  });
 };
 </script>
 </body>
