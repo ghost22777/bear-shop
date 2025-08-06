@@ -22,5 +22,5 @@ const petList = [
   { name: "Queen_bee", img: "images/Queen_bee.png", weight: 5, price: 3 },
 
   // 🟡 Phổ thông (Common) - dễ quay ra
-  { name: "FrenchFryFerret", img: "images/FrenchFryFerret.png", weight: 0.3, price: 6 }
+  { name: "FrenchFryFerret", img: "images/FrenchFryFerret.png", weight: 0.3, price: 6.00 }
 ];
