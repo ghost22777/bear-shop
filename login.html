@@ -4,62 +4,18 @@
   <meta charset="UTF-8" />
   <title>🔐 Login - Bear Shop</title>
   <style>
-    body {
-      background: #0d001a;
-      font-family: Arial, sans-serif;
-      color: white;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .navbar {
-      background: #1a001a;
-      width: 100%;
-      padding: 12px;
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      font-weight: bold;
-      box-shadow: 0 0 10px #ff00ff;
-    }
-    .navbar a { color: orange; text-decoration: none; }
-    .navbar a:hover { color: #ff00ff; }
-    h1 { margin: 25px 0; color: #ffccff; text-shadow: 0 0 10px #ff00ff; }
-    .login-box {
-      background: #1a0026;
-      border: 2px solid #ff00ff;
-      border-radius: 12px;
-      padding: 25px;
-      width: 320px;
-      box-shadow: 0 0 20px #ff00ff55;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .login-box input {
-      background: #0d0d0d;
-      border: 1px solid #555;
-      padding: 10px;
-      border-radius: 5px;
-      color: white;
-      font-size: 14px;
-    }
-    .login-box input:focus { border: 1px solid #ff00ff; outline: none; }
-    .login-box button {
-      background: #ff00ff;
-      border: none;
-      color: white;
-      font-weight: bold;
-      padding: 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      box-shadow: 0 0 10px #ff00ff;
-      transition: 0.2s;
-    }
-    .login-box button:hover { background: #ff33ff; box-shadow: 0 0 15px #ff00ff; }
-    .switch { margin-top: 10px; font-size: 13px; color: #ccc; }
-    .switch a { color: #ff00ff; cursor: pointer; text-decoration: none; }
+    body { background:#0d001a; font-family:Arial,sans-serif; color:white; margin:0; display:flex; flex-direction:column; align-items:center; }
+    .navbar { background:#1a001a; width:100%; padding:12px; display:flex; justify-content:center; gap:20px; font-weight:bold; box-shadow:0 0 10px #ff00ff; }
+    .navbar a { color:orange; text-decoration:none; }
+    .navbar a:hover { color:#ff00ff; }
+    h1 { margin:25px 0; color:#ffccff; text-shadow:0 0 10px #ff00ff; }
+    .login-box { background:#1a0026; border:2px solid #ff00ff; border-radius:12px; padding:25px; width:320px; box-shadow:0 0 20px #ff00ff55; display:flex; flex-direction:column; gap:12px; }
+    .login-box input { background:#0d0d0d; border:1px solid #555; padding:10px; border-radius:5px; color:white; font-size:14px; }
+    .login-box input:focus { border:1px solid #ff00ff; outline:none; }
+    .login-box button { background:#ff00ff; border:none; color:white; font-weight:bold; padding:10px; border-radius:6px; cursor:pointer; box-shadow:0 0 10px #ff00ff; transition:0.2s; }
+    .login-box button:hover { background:#ff33ff; box-shadow:0 0 15px #ff00ff; }
+    .switch { margin-top:10px; font-size:13px; color:#ccc; }
+    .switch a { color:#ff00ff; cursor:pointer; text-decoration:none; }
   </style>
 </head>
 <body>
@@ -88,95 +44,60 @@
     <div class="switch">Already have an account? <a onclick="toggleLogin()">Login</a></div>
   </div>
 
-  <!-- Firebase SDK -->
+  <!-- ✅ Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <script>
-    // Firebase config
+    // ✅ Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyBUCFW2ffGXPBogDUyd1cDYEt15fHQiz9I",
       authDomain: "bearshop-49b90.firebaseapp.com",
       projectId: "bearshop-49b90",
       storageBucket: "bearshop-49b90.firebasestorage.app",
       messagingSenderId: "764985024020",
-      appId: "1:764985024020:web:62e152b71173d2f3c89101",
-      measurementId: "G-D3DC6707R1"
+      appId: "1:764985024020:web:62e152b71173d2f3c89101"
     };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // Switch UI
-    function toggleRegister() {
-      document.getElementById("loginForm").style.display = "none";
-      document.getElementById("registerForm").style.display = "flex";
-    }
-    function toggleLogin() {
-      document.getElementById("loginForm").style.display = "flex";
-      document.getElementById("registerForm").style.display = "none";
-    }
+    // 🔹 Toggle Forms
+    function toggleRegister(){document.getElementById("loginForm").style.display="none";document.getElementById("registerForm").style.display="flex";}
+    function toggleLogin(){document.getElementById("loginForm").style.display="flex";document.getElementById("registerForm").style.display="none";}
 
-    // Register
-    function register() {
-      const email = document.getElementById("regEmail").value.trim();
-      const username = document.getElementById("regUsername").value.trim();
-      const password = document.getElementById("regPassword").value.trim();
-      const confirm = document.getElementById("regConfirm").value.trim();
+    // 🔹 Register User
+    function register(){
+      const email=document.getElementById("regEmail").value.trim();
+      const username=document.getElementById("regUsername").value.trim();
+      const password=document.getElementById("regPassword").value.trim();
+      const confirm=document.getElementById("regConfirm").value.trim();
+      if(!email||!username||!password||!confirm) return alert("⚠️ Please fill all fields!");
+      if(password!==confirm) return alert("❌ Passwords do not match!");
 
-      if (!email || !username || !password || !confirm) {
-        alert("⚠️ Please fill all fields!");
-        return;
-      }
-      if (password !== confirm) {
-        alert("❌ Passwords do not match!");
-        return;
-      }
-
-      auth.createUserWithEmailAndPassword(email, password)
-        .then(async (userCredential) => {
-          const user = userCredential.user;
-          // Save extra data to Firestore
-          await db.collection("users").doc(user.uid).set({
-            username: username,
-            email: email,
-            balance: 0,
-            isAdmin: username === "duc"
-          });
-          alert("✅ Account created! You can login now.");
-          toggleLogin();
-        })
-        .catch(error => {
-          alert("❌ Error: " + error.message);
+      auth.createUserWithEmailAndPassword(email,password).then(async cred=>{
+        await db.collection("users").doc(cred.user.uid).set({
+          username,email,balance:0,isAdmin:(username==="duc")
         });
+        alert("✅ Account created! Please login now.");toggleLogin();
+      }).catch(e=>alert("❌ "+e.message));
     }
 
-    // Login
-    function login() {
-      const email = document.getElementById("loginEmail").value.trim();
-      const password = document.getElementById("loginPassword").value.trim();
+    // 🔹 Login User
+    function login(){
+      const email=document.getElementById("loginEmail").value.trim();
+      const password=document.getElementById("loginPassword").value.trim();
+      if(!email||!password) return alert("⚠️ Enter email & password!");
 
-      auth.signInWithEmailAndPassword(email, password)
-        .then(async (userCredential) => {
-          const user = userCredential.user;
-          const userDoc = await db.collection("users").doc(user.uid).get();
-          if (!userDoc.exists) {
-            alert("❌ User data not found!");
-            return;
-          }
-          const userData = userDoc.data();
-          // Save currentUser with uid to localStorage
-          const currentUser = { uid: user.uid, ...userData };
-          localStorage.setItem("currentUser", JSON.stringify(currentUser));
-          alert("✅ Login successful!");
-          window.location.href = "index.html";
-        })
-        .catch(error => {
-          alert("❌ Wrong email or password! " + error.message);
-        });
+      auth.signInWithEmailAndPassword(email,password).then(async cred=>{
+        const doc=await db.collection("users").doc(cred.user.uid).get();
+        if(!doc.exists) return alert("❌ User data not found!");
+        const userData={uid:cred.user.uid,...doc.data()};
+        localStorage.setItem("currentUser",JSON.stringify(userData));
+        alert("✅ Login successful!");window.location.href="index.html";
+      }).catch(e=>alert("❌ "+e.message));
     }
   </script>
 </body>
