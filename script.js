@@ -3,7 +3,7 @@
 // =============================
 const SHECKLES_ITEM = "x1 700T+ Sheckles";
 const PET_REWARD_IMG = "images/pet_reward.png";
-const PET_CHANCE = 0.03; // 🎯 Tỷ lệ ra pet: 5% (giảm hoặc tăng tùy ý)
+const PET_CHANCE = 0.005; // 🎯 Tỷ lệ ra pet: 5% (giảm hoặc tăng tùy ý)
 
 let currentUser = null; 
 let currentUserDocRef = null; 
