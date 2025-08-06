@@ -1,29 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>⚙️ Admin Panel - Bear Shop (Secure)</title>
-  <style>
-    body { background:#150015; color:white; font-family:Arial,sans-serif; text-align:center; margin:0; }
-    h1, h2, h3 { color:#ffccff; text-shadow:0 0 10px #ff00ff; }
-    table { width:90%; margin:20px auto; border-collapse:collapse; background:#1c1c1c; box-shadow:0 0 10px #ff00ff; }
-    th, td { border:1px solid #333; padding:8px; }
-    th { background:#ff00ff; color:black; }
-    button { background:limegreen; color:white; border:none; padding:5px 10px; margin:2px; border-radius:5px; cursor:pointer; }
-    button:hover { background:green; }
-    .danger { background:red !important; }
-    .user-card { border:1px solid #ff00ff; padding:10px; margin:10px auto; width:90%; background:#1c1c1c; border-radius:8px; text-align:left; }
-    ul { padding-left:20px; }
-  </style>
+<meta charset="UTF-8" />
+<title>⚙️ Admin Panel - Bear Shop (Secure)</title>
+<style>
+  body { background:#150015; color:white; font-family:Arial,sans-serif; text-align:center; margin:0; }
+  h1, h2, h3 { color:#ffccff; text-shadow:0 0 10px #ff00ff; }
+  table { width:95%; margin:20px auto; border-collapse:collapse; background:#1c1c1c; box-shadow:0 0 10px #ff00ff; }
+  th, td { border:1px solid #333; padding:8px; word-wrap:break-word; }
+  th { background:#ff00ff; color:black; }
+  tr.pending { background:#331133; }
+  button { background:limegreen; color:white; border:none; padding:5px 10px; margin:2px; border-radius:5px; cursor:pointer; }
+  button:hover { background:green; }
+  .danger { background:red !important; }
+  .user-card { border:1px solid #ff00ff; padding:10px; margin:10px auto; width:95%; background:#1c1c1c; border-radius:8px; text-align:left; }
+  ul { padding-left:20px; }
+</style>
 
-  <!-- ✅ Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
-<h1>⚙️ Admin Panel (Secured)</h1>
+<h1>⚙️ Admin Panel (Improved)</h1>
 
 <script>
 const firebaseConfig = {
@@ -39,7 +39,6 @@ const auth=firebase.auth(), db=firebase.firestore();
 
 let currentUser=null;
 
-// ✅ Check admin login
 auth.onAuthStateChanged(async (user)=>{
   if(!user){alert("🚫 Please login first.");location.href="login.html";return;}
   const snap=await db.collection("users").doc(user.uid).get();
@@ -68,6 +67,7 @@ async function loadUsers(){
         <h3>${u.username||u.email} - Balance: $${(u.balance||0).toFixed(2)}</h3>
         <button onclick="resetBalance('${u.id}')">Reset Balance</button>
         <button class="danger" onclick="deleteUser('${u.id}')">🗑️ Delete User (All Data)</button>
+        <button class="danger" onclick="deleteAllItems('${u.id}')">🗑️ Delete All Items</button>
         <h4>🐾 Pets:</h4>
         <ul>${pets.length?pets.map(p=>`<li>${p.item} <button onclick="deleteItem('${p.id}')">❌</button></li>`).join(""):"<li>No pets</li>"}</ul>
         <h4>💰 Sheckles:</h4>
@@ -75,12 +75,18 @@ async function loadUsers(){
       `;
       c.appendChild(div);
     });
-  }catch(e){c.innerHTML=`<p style="color:red">❌ Error: ${e.message}</p>`;}
+  }catch(e){c.innerHTML=`<p style="color:red">❌ ${e.message}</p>`;}
 }
 
 // ✅ Admin Actions
 async function resetBalance(id){await db.collection("users").doc(id).update({balance:0});alert("✅ Balance reset!");loadUsers();}
 async function deleteItem(id){await db.collection("inventory").doc(id).delete();alert("✅ Item deleted.");loadUsers();}
+async function deleteAllItems(uid){
+  if(!confirm("⚠️ Delete all items of this user?"))return;
+  const batch=db.batch();
+  const inv=await db.collection("inventory").where("userId","==",uid).get();inv.forEach(d=>batch.delete(d.ref));
+  await batch.commit();alert("✅ All items deleted.");loadUsers();
+}
 async function deleteUser(uid){
   if(!confirm("⚠️ Delete this user and all their data?"))return;
   const batch=db.batch();
@@ -90,35 +96,35 @@ async function deleteUser(uid){
   await batch.commit(); await db.collection("users").doc(uid).delete();
   alert("✅ User deleted."); loadUsers();
 }
-async function addMoney(){
-  const name=document.getElementById("targetUser").value.trim();
-  const amount=parseFloat(document.getElementById("amount").value);
-  if(!name||isNaN(amount)||amount<=0)return alert("⚠️ Enter valid data!");
-  const users=await getUsers(); const u=users.find(x=>x.username===name||x.email===name);
-  if(!u)return alert("❌ User not found");
-  await db.collection("users").doc(u.id).update({balance:(u.balance||0)+amount});
-  alert(`✅ Added $${amount} to ${u.username}`); loadUsers();
-}
 
 // ✅ Withdraw Requests
 async function loadWithdraws(){
   const t=document.getElementById("withdrawTable"); t.innerHTML="";
   const reqs=await getWithdraws(); 
-  if(!reqs.length){t.innerHTML="<tr><td colspan='6'>⚠️ No requests</td></tr>";return;}
+  if(!reqs.length){t.innerHTML="<tr><td colspan='6'>⚠️ No withdraw requests.</td></tr>";return;}
   reqs.forEach(r=>{
     const tr=document.createElement("tr");
+    if((r.status||"pending").toLowerCase()=="pending") tr.classList.add("pending");
     tr.innerHTML=`
       <td>${r.username||"Unknown"}</td>
       <td>${r.item}</td>
       <td>${r.name}</td>
-      <td><a href="${r.link}" target="_blank">VIP Link</a></td>
+      <td><span style="color:#00ffff">${r.link}</span></td>
       <td>${r.status||"pending"}</td>
-      <td><button onclick="markDone('${r.id}')">✅ Done</button></td>
+      <td><button onclick="markDone('${r.id}')">✅ Mark Done</button>
+          <button class="danger" onclick="deleteWithdraw('${r.id}')">🗑️ Delete</button></td>
     `;
     t.appendChild(tr);
   });
 }
-async function markDone(id){await db.collection("withdraws").doc(id).delete();alert("✅ Request removed.");loadWithdraws();}
+async function markDone(id){await db.collection("withdraws").doc(id).update({status:"done"});alert("✅ Marked as Done.");loadWithdraws();}
+async function deleteWithdraw(id){await db.collection("withdraws").doc(id).delete();alert("✅ Request deleted.");loadWithdraws();}
+async function deleteAllWithdraws(){
+  if(!confirm("⚠️ Delete ALL withdraw requests?"))return;
+  const snap=await db.collection("withdraws").get();
+  const batch=db.batch(); snap.forEach(d=>batch.delete(d.ref));
+  await batch.commit(); alert("✅ All withdraw requests deleted."); loadWithdraws();
+}
 </script>
 
 <div style="width:90%;margin:20px auto;background:#1c1c1c;padding:10px;border-radius:8px;box-shadow:0 0 10px #00ffff;">
@@ -131,9 +137,9 @@ async function markDone(id){await db.collection("withdraws").doc(id).delete();al
 <h2>👥 Users</h2>
 <div id="userList"></div>
 
-<h2>📋 Withdraw Requests</h2>
+<h2>📋 Withdraw Requests <button class="danger" onclick="deleteAllWithdraws()">🗑️ Delete All</button></h2>
 <table>
-<thead><tr><th>User</th><th>Item</th><th>Name</th><th>Link</th><th>Status</th><th>Action</th></tr></thead>
+<thead><tr><th>User</th><th>Item</th><th>In-Game Name</th><th>VIP Link</th><th>Status</th><th>Action</th></tr></thead>
 <tbody id="withdrawTable"></tbody>
 </table>
 
